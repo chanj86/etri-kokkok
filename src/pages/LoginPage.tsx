@@ -90,6 +90,7 @@ export function LoginPage() {
       <section className="auth-panel">
         <div className="auth-form-wrap">
           <div className="auth-heading">
+            <img className="auth-etri-logo" src="/etri-logo.png" alt="ETRI" />
             <p className="eyebrow">{mode === 'login' ? '다시 만나 반가워요' : '새 회원 등록'}</p>
             <h2>{mode === 'login' ? 'ETRI 콕콕 로그인' : 'ETRI 회원 등록'}</h2>
             <p>휴대전화 번호와 비밀번호로 간편하게 시작합니다.</p>

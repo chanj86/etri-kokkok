@@ -33,9 +33,7 @@ export function AppShell({ children }: PropsWithChildren) {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            콕
-          </div>
+          <img className="brand-etri-logo" src="/etri-logo.png" alt="ETRI" />
           <div>
             <p className="eyebrow">{snapshot.member.clubName}</p>
             <strong>안녕하세요, {snapshot.member.nickname}님</strong>

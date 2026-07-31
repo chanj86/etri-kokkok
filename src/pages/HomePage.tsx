@@ -40,6 +40,22 @@ export function HomePage() {
         description="내 순서와 코트 상황을 한눈에 확인하세요."
       />
 
+      <section className="etri-welcome-banner">
+        <div className="etri-welcome-copy">
+          <img src="/etri-logo.png" alt="ETRI" />
+          <div>
+            <span className="section-kicker">ETRI 콕콕</span>
+            <h2>함께 기다리고, 함께 즐겨요</h2>
+            <p>ETRI 캐릭터와 함께 오늘의 레슨과 게임을 시작해 보세요.</p>
+          </div>
+        </div>
+        <img
+          className="etri-welcome-characters"
+          src="/etri-characters.png"
+          alt="ETRI 캐릭터"
+        />
+      </section>
+
       <section className="home-hero-grid">
         <article className="lesson-hero">
           <div className="card-topline">

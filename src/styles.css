@@ -110,6 +110,12 @@ input {
   gap: 12px;
 }
 
+.brand-etri-logo {
+  width: 74px;
+  height: 28px;
+  object-fit: contain;
+}
+
 .brand-mark,
 .loading-mark {
   display: grid;
@@ -638,6 +644,12 @@ input {
   width: min(100%, 460px);
 }
 
+.auth-etri-logo {
+  width: 112px;
+  height: auto;
+  margin-bottom: 18px;
+}
+
 .auth-heading h2 {
   margin-top: 7px;
   font-size: 31px;
@@ -807,6 +819,60 @@ input {
 }
 
 /* 홈 */
+.etri-welcome-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 164px;
+  padding: 24px 320px 24px 26px;
+  overflow: hidden;
+  border: 1px solid #d9e4ef;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 76% 16%, rgba(255, 155, 66, 0.2), transparent 15rem),
+    linear-gradient(135deg, #ffffff, #eef4fa);
+  box-shadow: var(--shadow-sm);
+}
+
+.etri-welcome-copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.etri-welcome-copy > img {
+  width: 108px;
+  height: auto;
+  padding-right: 18px;
+  border-right: 1px solid #d6e1ec;
+}
+
+.etri-welcome-copy h2 {
+  margin-top: 4px;
+  color: var(--forest);
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.etri-welcome-copy p {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.etri-welcome-characters {
+  position: absolute;
+  right: 14px;
+  bottom: -16px;
+  width: 290px;
+  max-height: 170px;
+  object-fit: contain;
+  object-position: right bottom;
+}
+
 .home-hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
@@ -1023,11 +1089,13 @@ input {
 
 /* 레슨 */
 .my-lesson-card {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   padding: 26px;
+  overflow: hidden;
   border-radius: 27px;
   color: white;
   background:
@@ -1240,6 +1308,7 @@ input {
 
 /* 게임 */
 .cycle-board {
+  position: relative;
   display: grid;
   grid-template-columns: 150px 1fr;
   min-height: 175px;
@@ -1829,10 +1898,12 @@ input {
 }
 
 .progress-card {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  overflow: hidden;
 }
 
 .progress-copy {
@@ -2107,11 +2178,13 @@ input {
 
 /* 프로필 */
 .profile-summary {
+  position: relative;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 16px;
   padding: 22px;
+  overflow: hidden;
   border-radius: 24px;
   color: white;
   background:
@@ -2158,6 +2231,47 @@ input {
   margin-top: 4px;
   color: rgba(255, 255, 255, 0.62);
   font-size: 11px;
+}
+
+.my-lesson-card::after,
+.cycle-board::after,
+.progress-card::after,
+.profile-summary::after {
+  position: absolute;
+  right: -16px;
+  bottom: -18px;
+  width: 235px;
+  height: 138px;
+  background: url("/etri-characters.png") right bottom / contain no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.my-lesson-card::after,
+.cycle-board::after {
+  opacity: 0.12;
+}
+
+.progress-card::after {
+  right: 10px;
+  opacity: 0.055;
+}
+
+.profile-summary::after {
+  right: 18px;
+  bottom: 12px;
+  width: 150px;
+  height: 48px;
+  background-image: url("/etri-logo.png");
+  opacity: 0.16;
+}
+
+.my-lesson-card > *,
+.cycle-board > *,
+.progress-card > *,
+.profile-summary > * {
+  position: relative;
+  z-index: 1;
 }
 
 .profile-form {
@@ -2363,6 +2477,14 @@ fieldset.field {
     grid-template-columns: 0.75fr 1fr;
   }
 
+  .etri-welcome-banner {
+    padding-right: 255px;
+  }
+
+  .etri-welcome-characters {
+    width: 245px;
+  }
+
   .home-hero-grid {
     grid-template-columns: 1fr;
   }
@@ -2404,6 +2526,11 @@ fieldset.field {
     width: 38px;
     height: 38px;
     border-radius: 12px;
+  }
+
+  .brand-etri-logo {
+    width: 62px;
+    height: 24px;
   }
 
   .brand .eyebrow {
@@ -2472,6 +2599,47 @@ fieldset.field {
 
   .auth-heading h2 {
     font-size: 26px;
+  }
+
+  .auth-etri-logo {
+    width: 96px;
+    margin-bottom: 14px;
+  }
+
+  .etri-welcome-banner {
+    min-height: 230px;
+    padding: 20px 18px 122px;
+  }
+
+  .etri-welcome-copy {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .etri-welcome-copy > img {
+    width: 92px;
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .etri-welcome-copy h2 {
+    font-size: 19px;
+  }
+
+  .etri-welcome-characters {
+    right: 50%;
+    bottom: -20px;
+    width: 230px;
+    max-height: 125px;
+    transform: translateX(50%);
+  }
+
+  .my-lesson-card::after,
+  .cycle-board::after,
+  .progress-card::after {
+    width: 175px;
+    opacity: 0.08;
   }
 
   .home-hero-grid {
