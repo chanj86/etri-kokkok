@@ -7,3 +7,4 @@ coverage
 .vite
 *.log
 supabase/.temp
+supabase/cron.local.sql

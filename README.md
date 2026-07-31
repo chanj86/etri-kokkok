@@ -38,77 +38,73 @@ Supabase 환경 변수가 없으면 로그인 화면의 `데모 입장`으로 �
 
 ## Supabase 연결
 
-### 1. 프로젝트 생성과 마이그레이션
+### 1. 비밀값 준비
 
-Supabase Free 프로젝트를 만든 뒤 CLI로 연결합니다.
+`AUTH_PEPPER`, `NOTIFICATION_CRON_SECRET`, VAPID 키를 만들어 `supabase/.env`에 저장합니다. 이 파일은 Git에서 제외됩니다.
 
 ```bash
-npx supabase login
-npx supabase link --project-ref YOUR_PROJECT_REF
-npx supabase db push
+cp supabase/.env.example supabase/.env
+npx web-push generate-vapid-keys --json
+openssl rand -hex 32
+```
+
+### 2. 프로젝트 생성
+
+[Supabase 대시보드](https://supabase.com/dashboard)에서 무료 프로젝트를 만들고 리전은 서울 등 가까운 곳을 선택합니다. 생성 시 입력한 데이터베이스 비밀번호를 안전하게 보관하세요.
+
+### 3. 연동 스크립트 실행
+
+브라우저 로그인이 필요하므로 사용자 터미널에서 실행합니다.
+
+```bash
+./scripts/setup-supabase.sh
+```
+
+스크립트는 CLI 로그인, 프로젝트 연결, 마이그레이션 적용, Edge Function 비밀값 등록과 배포, `.env.local` 생성을 순서대로 처리합니다. 배포 주소가 정해진 뒤에는 다음처럼 다시 실행해 `APP_URL`만 갱신할 수 있습니다.
+
+```bash
+./scripts/setup-supabase.sh --app-url https://your-project.pages.dev
 ```
 
 동호회는 `ETRI 콕콕` 하나로 고정됩니다. 첫 가입자는 관리자, 이후 가입자는 일반 회원이 됩니다. 전화번호는 서버에서 해시 로그인 식별자로 변환하므로 SMS 서비스나 실제 전화번호 저장이 필요하지 않습니다.
 
-### 2. VAPID 키 생성
+`SUPABASE_SERVICE_ROLE_KEY`는 Supabase 런타임이 기본 제공하므로 별도로 등록하지 않으며, 브라우저 환경 변수에 넣으면 안 됩니다.
 
-```bash
-npx web-push generate-vapid-keys --json
-```
+### 4. 1분 간격 알림 작업
 
-출력된 공개 키와 비밀 키를 별도로 보관합니다.
-
-### 3. Edge Function 비밀값
-
-`AUTH_PEPPER`와 `NOTIFICATION_CRON_SECRET`은 각각 32바이트 이상의 무작위 문자열을 사용하세요.
-
-```bash
-npx supabase secrets set \
-  AUTH_PEPPER="YOUR_LONG_RANDOM_SECRET" \
-  VAPID_PUBLIC_KEY="YOUR_VAPID_PUBLIC_KEY" \
-  VAPID_PRIVATE_KEY="YOUR_VAPID_PRIVATE_KEY" \
-  VAPID_SUBJECT="mailto:admin@example.com" \
-  NOTIFICATION_CRON_SECRET="YOUR_CRON_SECRET" \
-  APP_URL="https://YOUR_PROJECT.pages.dev"
-```
-
-함수를 배포합니다.
-
-```bash
-npx supabase functions deploy phone-auth --no-verify-jwt
-npx supabase functions deploy notify-lesson --no-verify-jwt
-```
-
-두 함수 모두 자체 인증을 수행합니다. `SUPABASE_SERVICE_ROLE_KEY`는 Supabase 런타임에 기본 제공되며 브라우저 환경 변수에 넣으면 안 됩니다.
-
-### 4. 프런트엔드 환경 변수
-
-`.env.example`을 `.env.local`로 복사하고 실제 값을 입력합니다.
-
-```dotenv
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
-VITE_VAPID_PUBLIC_KEY=YOUR_VAPID_PUBLIC_KEY
-```
-
-### 5. 1분 간격 알림 작업
-
-[supabase/cron.example.sql](supabase/cron.example.sql)의 플레이스홀더를 실제 프로젝트 URL, anon key, `NOTIFICATION_CRON_SECRET`으로 바꾼 뒤 Supabase SQL Editor에서 한 번 실행합니다.
+연동 스크립트가 실제 값을 채운 `supabase/cron.local.sql`을 만들어 줍니다. 이 파일 내용을 Supabase SQL Editor에 붙여 넣고 한 번만 실행하세요. 수동으로 작성하려면 [supabase/cron.example.sql](supabase/cron.example.sql)을 참고합니다.
 
 Cron은 매분 `notify-lesson` 함수를 호출합니다. 함수는 예상 시작 15분 전이 된 예약을 잠그고 발송하여 중복 알림을 방지합니다.
 
 ## Cloudflare Pages 배포
 
-Git 저장소를 Cloudflare Pages에 연결하고 다음 값을 사용합니다.
+### 1. Git 원격 저장소 연결
+
+```bash
+git remote add origin https://github.com/<사용자명>/<저장소명>.git
+git push -u origin main
+```
+
+### 2. Pages 프로젝트 생성
+
+Cloudflare 대시보드에서 `Workers & Pages` → `Create` → `Pages` → Git 저장소 연결 후 다음 값을 사용합니다.
 
 - Framework preset: `Vite`
 - Build command: `npm run build`
 - Build output directory: `dist`
 - 환경 변수: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`
 
+세 환경 변수는 `.env.local`에 생성된 값을 그대로 복사하면 됩니다. Node 버전은 `.nvmrc`의 `22`가 자동 적용됩니다.
+
 SPA 경로 처리는 `public/_redirects`, 보안 헤더는 `public/_headers`에 포함되어 있습니다.
 
-배포 후 실제 Pages 주소로 `APP_URL` Edge Function secret을 다시 설정하세요.
+### 3. 배포 주소 반영
+
+```bash
+./scripts/setup-supabase.sh --app-url https://<프로젝트명>.pages.dev
+```
+
+Supabase 대시보드의 `Authentication` → `URL Configuration` → `Site URL`도 같은 주소로 설정하세요.
 
 ## iPhone 알림 조건
 
