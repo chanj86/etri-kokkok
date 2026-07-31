@@ -2,27 +2,27 @@
   font-family:
     Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
     "Noto Sans KR", "Segoe UI", sans-serif;
-  color: #17231f;
-  background: #f3f6f3;
+  color: #10233e;
+  background: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --ink: #17231f;
-  --muted: #65736d;
-  --line: #dfe7e1;
+  --ink: #10233e;
+  --muted: #67758a;
+  --line: #dce4ee;
   --surface: #ffffff;
-  --surface-soft: #f7f9f7;
-  --forest: #103c32;
-  --forest-2: #185a48;
-  --green: #1a9b67;
-  --green-soft: #e2f6ec;
-  --lime: #d9ff68;
-  --lime-dark: #bce83f;
-  --orange: #f5a623;
-  --orange-soft: #fff2dc;
+  --surface-soft: #f7f9fc;
+  --forest: #0e2a47;
+  --forest-2: #174c78;
+  --green: #1d5685;
+  --green-soft: #e8f0f8;
+  --lime: #ff9b42;
+  --lime-dark: #ef7b1a;
+  --orange: #f47b20;
+  --orange-soft: #fff0e4;
   --red: #d84b45;
   --red-soft: #fdebe9;
-  --shadow-sm: 0 8px 26px rgba(26, 55, 45, 0.06);
-  --shadow-md: 0 18px 54px rgba(18, 52, 42, 0.11);
+  --shadow-sm: 0 8px 26px rgba(16, 35, 62, 0.07);
+  --shadow-md: 0 18px 54px rgba(14, 42, 71, 0.13);
 }
 
 * {
@@ -32,7 +32,7 @@
 html {
   min-width: 320px;
   min-height: 100%;
-  background: #f3f6f3;
+  background: #ffffff;
 }
 
 body {
@@ -40,8 +40,8 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at 8% -10%, rgba(216, 255, 99, 0.18), transparent 26rem),
-    #f3f6f3;
+    radial-gradient(circle at 8% -10%, rgba(255, 155, 66, 0.14), transparent 26rem),
+    #ffffff;
 }
 
 button,
@@ -95,8 +95,8 @@ input {
     max(12px, env(safe-area-inset-top))
     max(22px, calc((100vw - 1180px) / 2))
     12px;
-  border-bottom: 1px solid rgba(213, 223, 216, 0.8);
-  background: rgba(247, 249, 247, 0.9);
+  border-bottom: 1px solid rgba(205, 216, 230, 0.85);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(18px);
 }
 
@@ -121,7 +121,7 @@ input {
   background: var(--lime);
   font-weight: 900;
   letter-spacing: -0.08em;
-  box-shadow: inset 0 -4px 0 rgba(16, 60, 50, 0.08);
+  box-shadow: inset 0 -4px 0 rgba(14, 42, 71, 0.1);
 }
 
 .brand .eyebrow {
@@ -217,9 +217,9 @@ input {
   grid-template-columns: repeat(5, 1fr);
   min-height: calc(68px + env(safe-area-inset-bottom));
   padding: 7px max(8px, calc((100vw - 650px) / 2)) env(safe-area-inset-bottom);
-  border-top: 1px solid rgba(216, 226, 219, 0.9);
+  border-top: 1px solid rgba(205, 216, 230, 0.9);
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 -12px 32px rgba(25, 58, 47, 0.07);
+  box-shadow: 0 -12px 32px rgba(14, 42, 71, 0.08);
   backdrop-filter: blur(18px);
 }
 
@@ -278,7 +278,7 @@ input {
 .button.primary {
   color: white;
   background: var(--forest);
-  box-shadow: 0 9px 22px rgba(16, 60, 50, 0.18);
+  box-shadow: 0 9px 22px rgba(14, 42, 71, 0.2);
 }
 
 .button.primary:hover {
@@ -338,7 +338,7 @@ input {
 }
 
 .status-pill.success {
-  color: #087044;
+  color: #174c78;
   background: var(--green-soft);
 }
 
@@ -353,16 +353,16 @@ input {
 }
 
 .status-pill.accent {
-  color: #315e0c;
-  background: #ebfac4;
+  color: #8a3f08;
+  background: var(--orange-soft);
 }
 
 .live-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #19a466;
-  box-shadow: 0 0 0 4px rgba(25, 164, 102, 0.13);
+  background: var(--orange);
+  box-shadow: 0 0 0 4px rgba(244, 123, 32, 0.14);
 }
 
 .surface-card {
@@ -554,7 +554,7 @@ input {
   border-radius: 25px;
   color: white;
   background:
-    radial-gradient(circle at 80% 20%, rgba(216, 255, 99, 0.19), transparent 15rem),
+    radial-gradient(circle at 80% 20%, rgba(255, 155, 66, 0.2), transparent 15rem),
     var(--forest);
   box-shadow: var(--shadow-md);
 }
@@ -595,10 +595,14 @@ input {
 
 /* 로그인 */
 .auth-page {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(350px, 0.9fr) minmax(480px, 1.1fr);
   min-height: 100vh;
-  background: white;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0) 34%, rgba(255, 255, 255, 0.18) 58%, rgba(255, 255, 255, 0.38)),
+    #fff8ec url("/etri-badminton-hero.png") left center / auto 165% no-repeat;
 }
 
 .auth-visual {
@@ -618,10 +622,16 @@ input {
 }
 
 .auth-panel {
+  position: relative;
+  z-index: 2;
   display: grid;
   place-items: center;
   min-height: 100vh;
   padding: 38px 28px;
+  border-left: 1px solid rgba(14, 42, 71, 0.1);
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: -20px 0 60px rgba(14, 42, 71, 0.08);
+  backdrop-filter: blur(14px) saturate(120%);
 }
 
 .auth-form-wrap {
@@ -648,9 +658,9 @@ input {
   gap: 12px;
   margin-top: 22px;
   padding: 15px;
-  border: 1px solid #d7e6b0;
+  border: 1px solid #ffd0a8;
   border-radius: 17px;
-  background: #f5fadf;
+  background: rgba(255, 240, 228, 0.88);
 }
 
 .demo-callout div {
@@ -660,12 +670,12 @@ input {
 }
 
 .demo-callout strong {
-  color: #31580e;
+  color: #9a4a0b;
   font-size: 12px;
 }
 
 .demo-callout span {
-  color: #718153;
+  color: #846f60;
   font-size: 10px;
 }
 
@@ -677,7 +687,7 @@ input {
   border: 0;
   border-radius: 10px;
   color: white;
-  background: #3f681d;
+  background: var(--forest);
   font-size: 11px;
   font-weight: 800;
   white-space: nowrap;
@@ -690,14 +700,14 @@ input {
   margin: 24px 0 20px;
   padding: 5px;
   border-radius: 14px;
-  background: #eef2ef;
+  background: rgba(232, 240, 248, 0.9);
 }
 
 .auth-tabs button {
   min-height: 39px;
   border: 0;
   border-radius: 10px;
-  color: #748179;
+  color: #66758a;
   background: transparent;
   font-size: 12px;
   font-weight: 800;
@@ -705,8 +715,8 @@ input {
 
 .auth-tabs button.active {
   color: var(--forest);
-  background: white;
-  box-shadow: 0 4px 15px rgba(32, 58, 48, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 15px rgba(14, 42, 71, 0.1);
 }
 
 .auth-form {
@@ -725,7 +735,7 @@ input {
 .auth-form label > span,
 .field > span,
 .field legend {
-  color: #44534c;
+  color: #253c59;
   font-size: 12px;
   font-weight: 800;
 }
@@ -735,18 +745,18 @@ input {
   width: 100%;
   min-height: 50px;
   padding: 0 15px;
-  border: 1px solid #d9e1dc;
+  border: 1px solid #d6e0eb;
   border-radius: 13px;
   outline: 0;
-  background: #fbfcfb;
+  background: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
 
 .auth-form input:focus,
 .field input:focus {
-  border-color: var(--green);
-  background: white;
-  box-shadow: 0 0 0 4px rgba(26, 155, 103, 0.1);
+  border-color: var(--forest-2);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 0 0 4px rgba(244, 123, 32, 0.16);
 }
 
 .input-with-icon {
@@ -758,7 +768,7 @@ input {
   top: 50%;
   left: 15px;
   transform: translateY(-50%);
-  color: #89968f;
+  color: #60748d;
 }
 
 .input-with-icon input {
@@ -816,8 +826,8 @@ input {
   flex-direction: column;
   color: white;
   background:
-    radial-gradient(circle at 90% 0%, rgba(216, 255, 99, 0.24), transparent 18rem),
-    linear-gradient(145deg, #0b382e, #155a46);
+    radial-gradient(circle at 90% 0%, rgba(255, 155, 66, 0.25), transparent 18rem),
+    linear-gradient(145deg, #0a223d, #174f80);
 }
 
 .card-topline,
@@ -1021,7 +1031,7 @@ input {
   border-radius: 27px;
   color: white;
   background:
-    radial-gradient(circle at 85% 10%, rgba(216, 255, 99, 0.18), transparent 15rem),
+    radial-gradient(circle at 85% 10%, rgba(255, 155, 66, 0.2), transparent 15rem),
     var(--forest);
   box-shadow: var(--shadow-md);
 }
@@ -1121,7 +1131,7 @@ input {
 
 .lesson-queue li.mine {
   border-bottom-color: transparent;
-  background: #eff8f3;
+  background: #fff5eb;
 }
 
 .queue-position {
@@ -1185,9 +1195,9 @@ input {
   align-items: center;
   gap: 12px;
   padding: 18px;
-  border: 1px solid #cfe3d7;
+  border: 1px solid #ffd3ad;
   border-radius: 18px;
-  background: #f1faf5;
+  background: #fff7ef;
 }
 
 .info-note.muted {
@@ -1246,7 +1256,7 @@ input {
   flex-direction: column;
   justify-content: center;
   background:
-    radial-gradient(circle, rgba(216, 255, 99, 0.16) 0 2px, transparent 3px) 0 0 / 20px 20px,
+    radial-gradient(circle, rgba(255, 155, 66, 0.17) 0 2px, transparent 3px) 0 0 / 20px 20px,
     rgba(255, 255, 255, 0.04);
 }
 
@@ -1346,8 +1356,8 @@ input {
 }
 
 .attendee-item.eligible {
-  border-color: #c6e6d4;
-  background: #f4fbf7;
+  border-color: #ffd0a8;
+  background: #fff7ef;
 }
 
 .attendee-order {
@@ -1364,7 +1374,7 @@ input {
   height: 38px;
   border-radius: 13px;
   color: var(--forest);
-  background: #e8eeea;
+  background: #e8eef5;
   font-size: 13px;
   font-weight: 900;
 }
@@ -1471,7 +1481,7 @@ input {
   height: 50px;
   margin-right: 14px;
   border-radius: 16px;
-  background: #edf5ef;
+  background: #e8f0f8;
 }
 
 .create-game-card.auto > div {
@@ -1556,7 +1566,7 @@ input {
   padding: 0 8px;
   border-radius: 9px;
   color: #476157;
-  background: #eff4f1;
+  background: #edf3f9;
   font-size: 9px;
   font-weight: 900;
 }
@@ -1588,7 +1598,7 @@ input {
   height: 32px;
   border-radius: 10px;
   color: var(--forest);
-  background: #e7f2eb;
+  background: #e8f0f8;
   font-size: 11px;
   font-weight: 900;
 }
@@ -1702,11 +1712,11 @@ input {
 
 .auto-panel {
   padding: 24px;
-  border: 1px solid #c8dfa0;
+  border: 1px solid #ffc48f;
   border-radius: 26px;
   background:
-    radial-gradient(circle at 95% 0%, rgba(216, 255, 99, 0.4), transparent 20rem),
-    #f5fae7;
+    radial-gradient(circle at 95% 0%, rgba(255, 155, 66, 0.32), transparent 20rem),
+    #fff7ee;
   box-shadow: var(--shadow-md);
 }
 
@@ -1766,7 +1776,7 @@ input {
   min-height: 56px;
   margin-bottom: 6px;
   padding: 8px;
-  border: 1px solid #dbe8c4;
+  border: 1px solid #ffd9b8;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.82);
 }
@@ -2055,7 +2065,7 @@ input {
 }
 
 .result-mark.win {
-  color: #087044;
+  color: #174c78;
   background: var(--green-soft);
 }
 
@@ -2105,7 +2115,7 @@ input {
   border-radius: 24px;
   color: white;
   background:
-    radial-gradient(circle at 90% 0%, rgba(216, 255, 99, 0.2), transparent 14rem),
+    radial-gradient(circle at 90% 0%, rgba(255, 155, 66, 0.22), transparent 14rem),
     var(--forest);
   box-shadow: var(--shadow-md);
 }
@@ -2132,7 +2142,7 @@ input {
   height: 14px;
   border: 3px solid var(--forest);
   border-radius: 50%;
-  background: #24c17c;
+  background: var(--orange);
 }
 
 .profile-summary .section-kicker {
@@ -2210,7 +2220,7 @@ fieldset.field {
 .segmented-control input:checked + span {
   color: var(--forest);
   background: white;
-  box-shadow: 0 4px 15px rgba(32, 58, 48, 0.08);
+  box-shadow: 0 4px 15px rgba(14, 42, 71, 0.1);
 }
 
 .number-input {
@@ -2324,7 +2334,7 @@ fieldset.field {
 @keyframes breathe {
   50% {
     transform: scale(1.06);
-    box-shadow: 0 12px 28px rgba(16, 60, 50, 0.18);
+    box-shadow: 0 12px 28px rgba(14, 42, 71, 0.2);
   }
 }
 
@@ -2343,7 +2353,7 @@ fieldset.field {
     bottom: 14px;
     transform: translateX(-50%);
     padding: 6px;
-    border: 1px solid rgba(216, 226, 219, 0.9);
+    border: 1px solid rgba(205, 216, 230, 0.9);
     border-radius: 23px;
   }
 }
@@ -2437,7 +2447,9 @@ fieldset.field {
 
   .auth-page {
     display: block;
-    background: #f8faf8;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.32)),
+      #fff8ec url("/etri-badminton-hero.png") center top / auto 72% no-repeat;
   }
 
   .auth-visual {
@@ -2452,6 +2464,10 @@ fieldset.field {
   .auth-panel {
     min-height: auto;
     padding: 28px 20px 50px;
+    border-top: 1px solid rgba(14, 42, 71, 0.1);
+    border-left: 0;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(12px) saturate(115%);
   }
 
   .auth-heading h2 {
