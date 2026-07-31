@@ -1995,6 +1995,110 @@ input {
   font-size: 16px;
 }
 
+.partner-record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.partner-record-item {
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fbfcfb;
+}
+
+.partner-record-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.partner-avatar {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  border-radius: 13px;
+  color: var(--forest);
+  background: var(--lime);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.partner-record-head strong,
+.partner-record-head span {
+  display: block;
+}
+
+.partner-record-head strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.partner-record-head span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.partner-record-score {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 17px;
+}
+
+.partner-record-score div {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.partner-record-score strong {
+  color: var(--green);
+  font-size: 24px;
+  letter-spacing: -0.045em;
+}
+
+.partner-record-score span,
+.partner-record-score em {
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.partner-record-score em {
+  padding-bottom: 3px;
+  font-weight: 800;
+}
+
+.partner-rate-track {
+  height: 5px;
+  margin-top: 11px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7ede9;
+}
+
+.partner-rate-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green), #76ce4d);
+}
+
+.partner-record-item > small {
+  display: block;
+  margin-top: 8px;
+  color: #909b95;
+  font-size: 8px;
+}
+
 .record-list {
   display: flex;
   flex-direction: column;
@@ -2354,6 +2458,10 @@ fieldset.field {
   .record-breakdown {
     width: 100%;
   }
+
+  .partner-record-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -2652,6 +2760,10 @@ fieldset.field {
   .progress-copy {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .partner-record-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-grid {

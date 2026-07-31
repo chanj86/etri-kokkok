@@ -21,8 +21,10 @@ import type {
   AppSnapshot,
   AuthInput,
   AutoArrangement,
+  GamePlayer,
   GameSnapshot,
   ProfileInput,
+  RecordSummary,
 } from '../types'
 import { AppContext, type AppNotice } from './appContext'
 
@@ -106,6 +108,57 @@ function advanceCycleIfComplete(game: GameSnapshot): GameSnapshot {
     return { ...game, currentCycle: game.currentCycle + 1 }
   }
   return game
+}
+
+function updateDemoPartnerRecord(
+  records: RecordSummary,
+  teammate: GamePlayer | undefined,
+  isFirstCompletion: boolean,
+  didWin: boolean,
+  previouslyWon: boolean,
+  playedAt: string,
+): RecordSummary {
+  if (!teammate || (!isFirstCompletion && previouslyWon === didWin)) {
+    return records
+  }
+
+  const existing = records.partnerStats.find(
+    (partner) => partner.memberId === teammate.memberId,
+  )
+  const games = existing?.games ?? 0
+  const wins = existing?.wins ?? 0
+  const losses = existing?.losses ?? 0
+  const nextGames = games + (isFirstCompletion ? 1 : 0)
+  const nextWins = isFirstCompletion
+    ? wins + (didWin ? 1 : 0)
+    : wins + (didWin ? 1 : -1)
+  const nextLosses = isFirstCompletion
+    ? losses + (didWin ? 0 : 1)
+    : losses + (didWin ? -1 : 1)
+  const nextPartner = {
+    memberId: teammate.memberId,
+    nickname: teammate.nickname,
+    games: nextGames,
+    wins: nextWins,
+    losses: nextLosses,
+    winRate: nextGames ? Math.round((nextWins / nextGames) * 100) : 0,
+    lastPlayedAt: isFirstCompletion
+      ? playedAt
+      : (existing?.lastPlayedAt ?? playedAt),
+  }
+  const partnerStats = [
+    ...records.partnerStats.filter(
+      (partner) => partner.memberId !== teammate.memberId,
+    ),
+    nextPartner,
+  ].sort(
+    (a, b) =>
+      b.wins - a.wins ||
+      b.games - a.games ||
+      a.nickname.localeCompare(b.nickname, 'ko'),
+  )
+
+  return { ...records, partnerStats }
 }
 
 export function AppProvider({ children }: PropsWithChildren) {
@@ -621,9 +674,16 @@ export function AppProvider({ children }: PropsWithChildren) {
           const mine = slot.players.find(
             (player) => player.memberId === current.member.id,
           )
+          const teammate = mine
+            ? slot.players.find(
+                (player) =>
+                  player.team === mine.team &&
+                  player.memberId !== current.member.id,
+              )
+            : undefined
           const didWin = mine?.team === winnerTeam
           const previouslyWon = mine?.team === slot.result?.winnerTeam
-          const nextRecords = !mine
+          const nextSummary = !mine
             ? current.records
             : isFirstCompletion
               ? {
@@ -639,6 +699,16 @@ export function AppProvider({ children }: PropsWithChildren) {
                     wins: current.records.wins + (didWin ? 1 : -1),
                     losses: current.records.losses + (didWin ? -1 : 1),
                   }
+          const nextRecords = mine
+            ? updateDemoPartnerRecord(
+                nextSummary,
+                teammate,
+                isFirstCompletion,
+                Boolean(didWin),
+                Boolean(previouslyWon),
+                now,
+              )
+            : nextSummary
 
           return withGameEligibility(
             {

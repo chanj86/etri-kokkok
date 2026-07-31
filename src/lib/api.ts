@@ -2,6 +2,7 @@ import type {
   AppSnapshot,
   AuthInput,
   AutoArrangement,
+  PartnerRecord,
   ProfileInput,
   Team,
 } from '../types'
@@ -50,11 +51,25 @@ export async function authenticateWithPin(
 
 export async function fetchSnapshot(): Promise<AppSnapshot> {
   const client = requireSupabase()
-  const { data, error } = await client.rpc('get_app_snapshot')
+  const [snapshotResult, partnerResult] = await Promise.all([
+    client.rpc('get_app_snapshot'),
+    client.rpc('get_my_partner_stats'),
+  ])
 
-  if (error) throw error
-  if (!data) throw new Error('동호회 데이터를 불러오지 못했습니다.')
-  return data as AppSnapshot
+  if (snapshotResult.error) throw snapshotResult.error
+  if (partnerResult.error) throw partnerResult.error
+  if (!snapshotResult.data) {
+    throw new Error('동호회 데이터를 불러오지 못했습니다.')
+  }
+
+  const snapshot = snapshotResult.data as AppSnapshot
+  return {
+    ...snapshot,
+    records: {
+      ...snapshot.records,
+      partnerStats: (partnerResult.data ?? []) as PartnerRecord[],
+    },
+  }
 }
 
 async function runAction(

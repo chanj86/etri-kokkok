@@ -199,6 +199,35 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       losses: 2,
       games: 5,
       lessonsThisMonth: 4,
+      partnerStats: [
+        {
+          memberId: 'member-1',
+          nickname: '소연',
+          games: 3,
+          wins: 2,
+          losses: 1,
+          winRate: 67,
+          lastPlayedAt: completedSlot.createdAt,
+        },
+        {
+          memberId: 'member-3',
+          nickname: '윤아',
+          games: 1,
+          wins: 1,
+          losses: 0,
+          winRate: 100,
+          lastPlayedAt: isoFromNow(-60 * 24 * 4),
+        },
+        {
+          memberId: 'member-2',
+          nickname: '현우',
+          games: 1,
+          wins: 0,
+          losses: 1,
+          winRate: 0,
+          lastPlayedAt: isoFromNow(-60 * 24 * 8),
+        },
+      ],
     },
   }
 }

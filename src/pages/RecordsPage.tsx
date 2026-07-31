@@ -1,5 +1,6 @@
 import {
   CalendarCheck2,
+  Handshake,
   Medal,
   Minus,
   TrendingUp,
@@ -90,6 +91,58 @@ export function RecordsPage() {
             <strong>{records.losses}</strong>
           </div>
         </div>
+      </section>
+
+      <section className="surface-card partner-record-card">
+        <div className="section-heading compact">
+          <div>
+            <span className="section-kicker">함께 만든 승리</span>
+            <h2>파트너별 전적</h2>
+          </div>
+          <StatusPill tone="accent">
+            {records.partnerStats.length}명
+          </StatusPill>
+        </div>
+
+        {records.partnerStats.length ? (
+          <div className="partner-record-grid">
+            {records.partnerStats.map((partner, index) => (
+              <article className="partner-record-item" key={partner.memberId}>
+                <div className="partner-record-head">
+                  <div className="partner-avatar">
+                    {partner.nickname.slice(0, 1)}
+                  </div>
+                  <div>
+                    <strong>{partner.nickname}</strong>
+                    <span>함께 {partner.games}게임</span>
+                  </div>
+                  {index === 0 && partner.wins > 0 && (
+                    <StatusPill tone="success">최다 승리</StatusPill>
+                  )}
+                </div>
+                <div className="partner-record-score">
+                  <div>
+                    <strong>{partner.wins}승</strong>
+                    <span>{partner.losses}패</span>
+                  </div>
+                  <em>승률 {partner.winRate}%</em>
+                </div>
+                <div className="partner-rate-track" aria-hidden="true">
+                  <span style={{ width: `${partner.winRate}%` }} />
+                </div>
+                <small>
+                  마지막 경기 {formatShortDate(partner.lastPlayedAt)}
+                </small>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={Handshake}
+            title="아직 파트너 전적이 없어요"
+            description="복식 게임 전적을 저장하면 파트너별 게임 수와 승리 횟수를 보여드려요."
+          />
+        )}
       </section>
 
       <section className="surface-card">

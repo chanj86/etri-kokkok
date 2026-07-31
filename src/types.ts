@@ -102,11 +102,22 @@ export interface AutoArrangement {
   explanation: string
 }
 
+export interface PartnerRecord {
+  memberId: string
+  nickname: string
+  games: number
+  wins: number
+  losses: number
+  winRate: number
+  lastPlayedAt: string
+}
+
 export interface RecordSummary {
   wins: number
   losses: number
   games: number
   lessonsThisMonth: number
+  partnerStats: PartnerRecord[]
 }
 
 export interface AppSnapshot {

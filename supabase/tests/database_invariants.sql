@@ -240,6 +240,18 @@ begin
   if current_round <> 3 then
     raise exception '두 번째 순환 완료 후 다음 순환이 열리지 않았습니다.';
   end if;
+
+  if (
+    public.get_my_partner_stats() -> 0 ->> 'memberId'
+  )::uuid <> '00000000-0000-0000-0000-000000000101'
+    or (
+      public.get_my_partner_stats() -> 0 ->> 'games'
+    )::integer <> 2
+    or (
+      public.get_my_partner_stats() -> 0 ->> 'wins'
+    )::integer <> 1 then
+    raise exception '파트너별 게임 수와 승리 횟수가 정확하지 않습니다.';
+  end if;
 end;
 $$;
 
