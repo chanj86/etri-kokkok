@@ -76,6 +76,10 @@ openssl rand -hex 32
 
 Cron은 매분 `notify-lesson` 함수를 호출합니다. 함수는 예상 시작 15분 전이 된 예약을 잠그고 발송하여 중복 알림을 방지합니다.
 
+### 5. 연동 점검
+
+[supabase/verify.sql](supabase/verify.sql)을 SQL Editor에서 실행하면 동호회, 회원, 관리자, 알림 예약 상태를 표로 확인할 수 있습니다. 읽기 전용 쿼리입니다.
+
 ## Cloudflare Pages 배포
 
 ### 1. Git 원격 저장소 연결
