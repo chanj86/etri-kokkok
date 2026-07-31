@@ -3,7 +3,6 @@ import {
   LockKeyhole,
   Phone,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { z } from 'zod'
@@ -81,27 +80,11 @@ export function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-visual">
-        <div className="auth-brand">
-          <div className="auth-logo">콕</div>
-          <span>ETRI 콕콕</span>
-        </div>
-        <div className="auth-message">
-          <span className="auth-kicker">
-            <Sparkles size={16} />
-            ETRI 배드민턴 코트 매니저
-          </span>
-          <h1>
-            기다림은 짧게,
-            <br />
-            게임은 더 즐겁게.
-          </h1>
-          <p>레슨 순서부터 공정한 게임 순환까지 한곳에서 관리하세요.</p>
-        </div>
-        <div className="court-lines" aria-hidden="true">
-          <div />
-          <div />
-          <div />
-        </div>
+        <img
+          className="auth-visual-image"
+          src="/etri-badminton-hero.png"
+          alt="점프 스매시를 하는 배드민턴 선수 일러스트"
+        />
       </section>
 
       <section className="auth-panel">

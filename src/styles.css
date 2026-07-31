@@ -111,7 +111,6 @@ input {
 }
 
 .brand-mark,
-.auth-logo,
 .loading-mark {
   display: grid;
   place-items: center;
@@ -604,90 +603,18 @@ input {
 
 .auth-visual {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
   min-height: 100vh;
-  padding: 46px clamp(36px, 6vw, 88px);
   overflow: hidden;
-  color: white;
-  background:
-    radial-gradient(circle at 78% 18%, rgba(216, 255, 99, 0.24), transparent 18rem),
-    linear-gradient(145deg, #0b3129, #154f40 70%, #0a332a);
+  background: #f8f0dc;
 }
 
-.auth-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.auth-logo {
-  width: 47px;
-  height: 47px;
-}
-
-.auth-message {
-  position: relative;
-  z-index: 2;
-  margin: auto 0;
-}
-
-.auth-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  color: var(--lime);
-  background: rgba(255, 255, 255, 0.07);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.auth-message h1 {
-  margin-top: 24px;
-  font-size: clamp(38px, 5vw, 64px);
-  letter-spacing: -0.065em;
-  line-height: 1.08;
-}
-
-.auth-message p {
-  max-width: 420px;
-  margin-top: 20px;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 16px;
-  line-height: 1.7;
-}
-
-.court-lines {
+.auth-visual-image {
   position: absolute;
-  right: -17%;
-  bottom: -18%;
-  width: 80%;
-  aspect-ratio: 1;
-  transform: rotate(-15deg);
-  border: 2px solid rgba(216, 255, 99, 0.13);
-  border-radius: 50%;
-}
-
-.court-lines div {
-  position: absolute;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  inset: 15%;
-}
-
-.court-lines div:nth-child(2) {
-  inset: 30%;
-}
-
-.court-lines div:nth-child(3) {
-  inset: 45%;
-  background: rgba(216, 255, 99, 0.06);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  inset: 0;
 }
 
 .auth-panel {
@@ -2426,14 +2353,6 @@ fieldset.field {
     grid-template-columns: 0.75fr 1fr;
   }
 
-  .auth-visual {
-    padding: 35px;
-  }
-
-  .auth-message h1 {
-    font-size: 39px;
-  }
-
   .home-hero-grid {
     grid-template-columns: 1fr;
   }
@@ -2522,33 +2441,12 @@ fieldset.field {
   }
 
   .auth-visual {
-    min-height: 250px;
-    padding: max(24px, env(safe-area-inset-top)) 23px 28px;
+    min-height: 310px;
     border-radius: 0 0 32px 32px;
   }
 
-  .auth-message {
-    margin: 42px 0 0;
-  }
-
-  .auth-message h1 {
-    margin-top: 14px;
-    font-size: 35px;
-  }
-
-  .auth-message p {
-    margin-top: 12px;
-    font-size: 12px;
-  }
-
-  .auth-kicker {
-    display: none;
-  }
-
-  .court-lines {
-    right: -22%;
-    bottom: -75%;
-    width: 82%;
+  .auth-visual-image {
+    object-position: center 62%;
   }
 
   .auth-panel {
