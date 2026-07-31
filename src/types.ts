@@ -128,9 +128,9 @@ export interface AppSnapshot {
 }
 
 export interface AuthInput {
-  clubCode: string
-  nickname: string
-  pin: string
+  phone: string
+  password: string
+  nickname?: string
 }
 
 export interface ProfileInput {

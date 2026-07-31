@@ -1,8 +1,8 @@
-# 배드민턴 예약 PWA 설계
+# ETRI 콕콕 PWA 설계
 
 ## 1. 문서 목적
 
-배드민턴 동호회 회원이 Android와 iPhone에서 같은 주소로 사용할 수 있는 설치형 웹 앱(PWA)의 MVP 설계를 정의한다.
+ETRI 배드민턴 회원이 Android와 iPhone에서 같은 주소로 사용할 수 있는 설치형 웹 앱(PWA)의 MVP 설계를 정의한다.
 
 핵심 목표는 다음과 같다.
 
@@ -34,12 +34,13 @@ Supabase Free는 소규모 동호회 MVP에 적합하지만 500MB 데이터베�
 
 ### 로그인
 
-- 입력값: 동호회 코드, 닉네임, 6자리 PIN
+- 입력값: 휴대전화 번호, 비밀번호
+- 신규 등록 시 이름 또는 닉네임을 추가로 입력한다.
 - 실제 이메일 주소는 요구하지 않는다.
-- PIN 원문은 저장하지 않는다.
-- 서버 함수가 PIN과 서버 비밀값을 조합해 Supabase Auth용 강한 내부 자격 증명을 만든다.
+- 전화번호 원문은 저장하지 않고 서버 비밀값을 사용한 해시 식별자로 변환한다.
+- 서버 함수가 비밀번호와 서버 비밀값을 조합해 Supabase Auth용 강한 내부 자격 증명을 만든다.
 - 연속 로그인 실패 시 일시 잠금한다.
-- PIN 분실 시 동호회 관리자가 임시 PIN으로 재설정한다.
+- 비밀번호 분실 시 동호회 관리자가 임시 비밀번호로 재설정한다.
 
 ## 3. 사용자와 권한
 
@@ -57,9 +58,8 @@ Supabase Free는 소규모 동호회 MVP에 적합하지만 500MB 데이터베�
 
 회원 권한을 모두 포함하고 다음 기능을 추가로 가진다.
 
-- 동호회 생성 및 가입 코드 관리
 - 회원 활성화/비활성화
-- PIN 재설정
+- 비밀번호 재설정
 - 잘못된 기록 복구
 
 게임 운영 기능은 확정 요구사항에 따라 모든 활성 회원에게 허용한다. 데이터 변경은 `audit_logs`에 기록한다.
@@ -68,7 +68,7 @@ Supabase Free는 소규모 동호회 MVP에 적합하지만 500MB 데이터베�
 
 ```mermaid
 flowchart TD
-    Login["동호회 코드·닉네임·PIN 로그인"] --> Home["오늘의 홈"]
+    Login["전화번호·비밀번호 로그인"] --> Home["오늘의 홈"]
     Home --> Lesson["레슨"]
     Home --> Game["게임"]
     Home --> History["기록"]
@@ -183,9 +183,9 @@ flowchart TD
 
 ### 로그인/가입
 
-- 동호회 코드
-- 닉네임
-- 6자리 PIN
+- 휴대전화 번호
+- 비밀번호
+- 신규 등록용 이름 또는 닉네임
 - 기존 회원 로그인과 신규 회원 가입 모드
 
 ### 홈
@@ -253,15 +253,14 @@ flowchart LR
     Cloudflare["Cloudflare Pages"] --> Browser
 ```
 
-프런트엔드는 공개 가능한 Supabase URL과 anon key만 사용한다. 서비스 역할 키, PIN 변환 비밀값, VAPID private key는 Supabase Edge Function secret에만 저장한다.
+프런트엔드는 공개 가능한 Supabase URL과 anon key만 사용한다. 서비스 역할 키, 전화번호·비밀번호 변환 비밀값, VAPID private key는 Supabase Edge Function secret에만 저장한다.
 
 ## 10. 데이터 모델
 
 ### `clubs`
 
-- 동호회 기본 정보
-- 로그인용 코드의 정규화 값
-- 가입 코드 해시
+- `ETRI 콕콕` 단일 동호회 기본 정보
+- 내부 식별 코드 `ETRI`
 - 생성자
 
 ### `members`
@@ -337,7 +336,7 @@ flowchart LR
 - 게임 관련 생성/수정은 같은 동호회의 활성 회원에게 허용한다.
 - 관리자 작업은 서버 함수에서 역할을 다시 검사한다.
 - 모든 원자적 업무 함수는 `auth.uid()`를 기준으로 동작하며 임의 회원 ID를 신뢰하지 않는다.
-- 브라우저 콘솔이나 저장소에 PIN, 서비스 역할 키, VAPID private key를 기록하지 않는다.
+- 브라우저 콘솔이나 저장소에 전화번호 원문, 비밀번호, 서비스 역할 키, VAPID private key를 기록하지 않는다.
 - 로그인 오류는 계정 존재 여부를 구분하지 않는 공통 문구로 표시한다.
 
 ## 12. 실패 및 예외 처리
@@ -371,7 +370,7 @@ flowchart LR
 Supabase Edge Function secret:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `PIN_PEPPER`
+- `AUTH_PEPPER`
 - `VAPID_PUBLIC_KEY`
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT`

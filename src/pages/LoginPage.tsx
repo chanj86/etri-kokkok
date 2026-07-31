@@ -1,33 +1,78 @@
-import { ArrowRight, KeyRound, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  ArrowRight,
+  LockKeyhole,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { z } from 'zod'
 import { useApp } from '../hooks/useApp'
 import { isSupabaseConfigured } from '../lib/supabase'
 
-const authSchema = z.object({
-  clubCode: z.string().trim().min(3, '동호회 코드를 3자 이상 입력해 주세요.'),
-  nickname: z.string().trim().min(2, '닉네임을 2자 이상 입력해 주세요.'),
-  pin: z.string().regex(/^\d{6}$/, 'PIN은 숫자 6자리로 입력해 주세요.'),
+const phoneSchema = z.string().trim().refine((value) => {
+  const digits = value.replace(/\D/g, '')
+  return /^010\d{8}$/.test(digits) || /^8210\d{8}$/.test(digits)
+}, '휴대전화 번호를 010-1234-5678 형식으로 입력해 주세요.')
+
+const loginSchema = z.object({
+  phone: phoneSchema,
+  password: z
+    .string()
+    .min(8, '비밀번호는 8자 이상 입력해 주세요.')
+    .max(64, '비밀번호는 64자 이하로 입력해 주세요.'),
 })
+
+const registerSchema = loginSchema
+  .extend({
+    nickname: z
+      .string()
+      .trim()
+      .min(2, '닉네임을 2자 이상 입력해 주세요.')
+      .max(20, '닉네임은 20자 이하로 입력해 주세요.'),
+    passwordConfirm: z.string(),
+  })
+  .refine((data) => data.password === data.passwordConfirm, {
+    message: '비밀번호 확인이 일치하지 않습니다.',
+    path: ['passwordConfirm'],
+  })
+
+function formatPhoneInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+}
+
+const initialPhone = ''
 
 export function LoginPage() {
   const { signIn, enterDemo, busyAction } = useApp()
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [clubCode, setClubCode] = useState('')
+  const [phone, setPhone] = useState(initialPhone)
   const [nickname, setNickname] = useState('')
-  const [pin, setPin] = useState('')
+  const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    const result = authSchema.safeParse({ clubCode, nickname, pin })
+    const input = { phone, nickname, password, passwordConfirm }
+    const result =
+      mode === 'login'
+        ? loginSchema.safeParse(input)
+        : registerSchema.safeParse(input)
     if (!result.success) {
       setFormError(result.error.issues[0]?.message ?? '입력값을 확인해 주세요.')
       return
     }
     setFormError(null)
     try {
-      await signIn(mode, result.data)
+      await signIn(mode, {
+        phone: result.data.phone,
+        password: result.data.password,
+        nickname: mode === 'register' ? nickname.trim() : undefined,
+      })
     } catch {
       // 전역 알림에서 서버 오류를 안내한다.
     }
@@ -38,12 +83,12 @@ export function LoginPage() {
       <section className="auth-visual">
         <div className="auth-brand">
           <div className="auth-logo">콕</div>
-          <span>콕콕</span>
+          <span>ETRI 콕콕</span>
         </div>
         <div className="auth-message">
           <span className="auth-kicker">
             <Sparkles size={16} />
-            우리 동호회 코트 매니저
+            ETRI 배드민턴 코트 매니저
           </span>
           <h1>
             기다림은 짧게,
@@ -63,8 +108,8 @@ export function LoginPage() {
         <div className="auth-form-wrap">
           <div className="auth-heading">
             <p className="eyebrow">{mode === 'login' ? '다시 만나 반가워요' : '새 회원 등록'}</p>
-            <h2>{mode === 'login' ? '동호회 입장하기' : '동호회 가입하기'}</h2>
-            <p>이메일 없이 동호회 코드와 PIN으로 간편하게 시작합니다.</p>
+            <h2>{mode === 'login' ? 'ETRI 콕콕 로그인' : 'ETRI 회원 등록'}</h2>
+            <p>휴대전화 번호와 비밀번호로 간편하게 시작합니다.</p>
           </div>
 
           {!isSupabaseConfigured && (
@@ -103,39 +148,62 @@ export function LoginPage() {
 
           <form className="auth-form" onSubmit={(event) => void submit(event)}>
             <label>
-              <span>동호회 코드</span>
-              <input
-                autoCapitalize="characters"
-                autoComplete="organization"
-                placeholder="예: KOKKOK24"
-                value={clubCode}
-                onChange={(event) => setClubCode(event.target.value.toUpperCase())}
-              />
-            </label>
-            <label>
-              <span>닉네임</span>
-              <input
-                autoComplete="username"
-                placeholder="동호회에서 사용하는 이름"
-                value={nickname}
-                onChange={(event) => setNickname(event.target.value)}
-              />
-            </label>
-            <label>
-              <span>6자리 PIN</span>
+              <span>휴대전화 번호</span>
               <div className="input-with-icon">
-                <KeyRound size={18} />
+                <Phone size={18} />
                 <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  maxLength={6}
-                  placeholder="••••••"
-                  value={pin}
-                  onChange={(event) => setPin(event.target.value.replace(/\D/g, ''))}
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="username"
+                  placeholder="010-1234-5678"
+                  value={phone}
+                  onChange={(event) => setPhone(formatPhoneInput(event.target.value))}
                 />
               </div>
             </label>
+            {mode === 'register' && (
+              <label>
+                <span>이름 또는 닉네임</span>
+                <input
+                  autoComplete="name"
+                  placeholder="ETRI에서 사용하는 이름"
+                  value={nickname}
+                  onChange={(event) => setNickname(event.target.value)}
+                />
+              </label>
+            )}
+            <label>
+              <span>비밀번호</span>
+              <div className="input-with-icon">
+                <LockKeyhole size={18} />
+                <input
+                  type="password"
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  minLength={8}
+                  maxLength={64}
+                  placeholder="8자 이상 입력"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </div>
+            </label>
+            {mode === 'register' && (
+              <label>
+                <span>비밀번호 확인</span>
+                <div className="input-with-icon">
+                  <LockKeyhole size={18} />
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={64}
+                    placeholder="비밀번호 다시 입력"
+                    value={passwordConfirm}
+                    onChange={(event) => setPasswordConfirm(event.target.value)}
+                  />
+                </div>
+              </label>
+            )}
 
             {formError && <p className="field-error">{formError}</p>}
 
@@ -155,7 +223,7 @@ export function LoginPage() {
 
           <p className="security-note">
             <ShieldCheck size={17} />
-            PIN 원문은 저장하지 않으며 동호회별 데이터는 안전하게 분리됩니다.
+            전화번호는 로그인 식별용 해시로 변환되며 원문을 저장하지 않습니다.
           </p>
         </div>
       </section>

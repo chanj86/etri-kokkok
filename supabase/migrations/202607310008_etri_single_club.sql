@@ -8,4 +8,5 @@ values (
   'ETRI',
   extensions.crypt('ETRI-INTERNAL', extensions.gen_salt('bf'))
 )
-on conflict (code_normalized) do nothing;
+on conflict (code_normalized)
+do update set name = excluded.name;

@@ -109,7 +109,7 @@ sw.addEventListener('push', (event: PushEvent) => {
 
   event.waitUntil(
     sw.registration.showNotification(
-      payload.title ?? '콕콕 레슨 알림',
+      payload.title ?? 'ETRI 콕콕 레슨 알림',
       {
         body: payload.body ?? '레슨 순서와 예상 시각을 확인해 주세요.',
         icon: payload.icon ?? '/badminton-icon.svg',

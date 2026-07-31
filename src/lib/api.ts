@@ -10,7 +10,7 @@ import { requireSupabase } from './supabase'
 
 type AuthMode = 'login' | 'register'
 
-interface PinAuthResponse {
+interface PhoneAuthResponse {
   session?: {
     access_token: string
     refresh_token: string
@@ -23,19 +23,19 @@ function asError(error: unknown, fallback: string): Error {
   return new Error(fallback)
 }
 
-export async function authenticateWithPin(
+export async function authenticateWithPhone(
   mode: AuthMode,
   input: AuthInput,
 ): Promise<void> {
   const client = requireSupabase()
-  const { data, error } = await client.functions.invoke<PinAuthResponse>(
-    'pin-auth',
+  const { data, error } = await client.functions.invoke<PhoneAuthResponse>(
+    'phone-auth',
     {
       body: {
         action: mode,
-        clubCode: input.clubCode.trim(),
-        nickname: input.nickname.trim(),
-        pin: input.pin,
+        phone: input.phone.trim(),
+        password: input.password,
+        nickname: input.nickname?.trim(),
       },
     },
   )

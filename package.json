@@ -1,5 +1,5 @@
 {
-  "name": "badminton-club-pwa",
+  "name": "etri-kokkok-pwa",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.sw.json && tsc --noEmit -p tsconfig.node.json",
-    "functions:check": "deno check supabase/functions/pin-auth/index.ts && deno check supabase/functions/notify-lesson/index.ts",
+    "functions:check": "deno check supabase/functions/phone-auth/index.ts && deno check supabase/functions/notify-lesson/index.ts",
     "verify": "npm run lint && npm test && npm run typecheck && npm run functions:check"
   },
   "dependencies": {

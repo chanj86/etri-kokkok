@@ -158,7 +158,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
     member: {
       id: 'demo-me',
       clubId: 'demo-club',
-      clubName: '콕콕 배드민턴',
+      clubName: 'ETRI 콕콕',
       nickname,
       role: 'owner',
       gender: 'male',

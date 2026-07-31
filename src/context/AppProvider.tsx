@@ -6,7 +6,7 @@ import {
   useState,
 } from 'react'
 import {
-  authenticateWithPin,
+  authenticateWithPhone,
   enablePushNotifications,
   fetchSnapshot,
   gameApi,
@@ -246,7 +246,7 @@ export function AppProvider({ children }: PropsWithChildren) {
           return
         }
 
-        await authenticateWithPin(mode, input)
+        await authenticateWithPhone(mode, input)
         await loadRemoteSnapshot()
         setDemoMode(false)
         setNotice({

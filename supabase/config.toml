@@ -1,4 +1,4 @@
-project_id = "badminton-club-pwa"
+project_id = "etri-kokkok-pwa"
 
 [api]
 enabled = true
@@ -28,7 +28,7 @@ enabled = true
 site_url = "http://localhost:5173"
 additional_redirect_urls = ["http://localhost:5173"]
 enable_signup = false
-minimum_password_length = 12
+minimum_password_length = 8
 
 [auth.email]
 enable_signup = false
@@ -39,7 +39,7 @@ enable_confirmations = false
 enabled = true
 policy = "per_worker"
 
-[functions.pin-auth]
+[functions.phone-auth]
 verify_jwt = false
 
 [functions.notify-lesson]

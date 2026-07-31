@@ -1,7 +1,7 @@
 {
-  "name": "콕콕 - 배드민턴 예약",
-  "short_name": "콕콕",
-  "description": "배드민턴 동호회 레슨과 게임 순서 예약",
+  "name": "ETRI 콕콕 - 배드민턴 예약",
+  "short_name": "ETRI 콕콕",
+  "description": "ETRI 배드민턴 레슨과 게임 순서 예약",
   "lang": "ko-KR",
   "start_url": "/",
   "scope": "/",

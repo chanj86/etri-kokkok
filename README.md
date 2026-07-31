@@ -1,6 +1,6 @@
-# 콕콕 - 배드민턴 예약 PWA
+# ETRI 콕콕 - 배드민턴 예약 PWA
 
-배드민턴 동호회의 레슨 순서와 복식 게임 순환을 관리하는 모바일 우선 PWA입니다. Android와 iPhone에서 같은 URL을 사용하며 홈 화면에 설치할 수 있습니다.
+ETRI 배드민턴 모임의 레슨 순서와 복식 게임 순환을 관리하는 모바일 우선 PWA입니다. Android와 iPhone에서 같은 URL을 사용하며 홈 화면에 설치할 수 있습니다.
 
 ## 주요 기능
 
@@ -8,6 +8,7 @@
 - 1인 15분 기준 순서와 예상 시각 자동 계산
 - 미루기, 취소, 월별 레슨 횟수
 - 예상 레슨 15분 전 Web Push
+- 휴대전화 번호와 비밀번호 로그인
 - 복식 4인 게임 슬롯 자율 참여
 - 모든 참석자가 참여한 뒤 다음 순환 자동 해제
 - 대기시간, 게임 수, 구력, 레슨 횟수, 성별 선택값을 고려한 자동 배치
@@ -47,7 +48,7 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
 ```
 
-첫 가입자가 존재하지 않는 동호회 코드를 사용하면 새 동호회와 관리자 계정이 만들어집니다. 같은 코드를 사용하는 이후 가입자는 일반 회원이 됩니다.
+동호회는 `ETRI 콕콕` 하나로 고정됩니다. 첫 가입자는 관리자, 이후 가입자는 일반 회원이 됩니다. 전화번호는 서버에서 해시 로그인 식별자로 변환하므로 SMS 서비스나 실제 전화번호 저장이 필요하지 않습니다.
 
 ### 2. VAPID 키 생성
 
@@ -59,11 +60,11 @@ npx web-push generate-vapid-keys --json
 
 ### 3. Edge Function 비밀값
 
-`PIN_PEPPER`와 `NOTIFICATION_CRON_SECRET`은 각각 32바이트 이상의 무작위 문자열을 사용하세요.
+`AUTH_PEPPER`와 `NOTIFICATION_CRON_SECRET`은 각각 32바이트 이상의 무작위 문자열을 사용하세요.
 
 ```bash
 npx supabase secrets set \
-  PIN_PEPPER="YOUR_LONG_RANDOM_SECRET" \
+  AUTH_PEPPER="YOUR_LONG_RANDOM_SECRET" \
   VAPID_PUBLIC_KEY="YOUR_VAPID_PUBLIC_KEY" \
   VAPID_PRIVATE_KEY="YOUR_VAPID_PRIVATE_KEY" \
   VAPID_SUBJECT="mailto:admin@example.com" \
@@ -74,7 +75,7 @@ npx supabase secrets set \
 함수를 배포합니다.
 
 ```bash
-npx supabase functions deploy pin-auth --no-verify-jwt
+npx supabase functions deploy phone-auth --no-verify-jwt
 npx supabase functions deploy notify-lesson --no-verify-jwt
 ```
 
@@ -115,7 +116,7 @@ iOS/iPadOS 16.4 이상에서 다음 순서가 필요합니다.
 
 1. Safari로 배포 URL 접속
 2. 공유 버튼에서 `홈 화면에 추가`
-3. 홈 화면의 콕콕 앱 실행
+3. 홈 화면의 ETRI 콕콕 앱 실행
 4. 앱 안에서 `알림 켜기`
 
 Safari 탭으로만 사용하면 iPhone Web Push가 동작하지 않습니다. 알림을 허용하지 않아도 앱 안의 순서와 예상 시각은 계속 표시됩니다.
@@ -154,4 +155,4 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
 
 Supabase Free는 소규모 동호회 MVP에 충분하지만 데이터베이스와 네트워크 한도가 있고 비활동 프로젝트가 일시정지될 수 있습니다. Cloudflare Pages의 정적 파일 요청은 무료 범위가 넓지만 두 서비스 모두 무료 플랜에서 가용성을 보장하지 않습니다.
 
-실제 키가 담긴 `.env`, 서비스 역할 키, `PIN_PEPPER`, VAPID private key는 Git에 커밋하지 마세요.
+실제 키가 담긴 `.env`, 서비스 역할 키, `AUTH_PEPPER`, VAPID private key는 Git에 커밋하지 마세요.
