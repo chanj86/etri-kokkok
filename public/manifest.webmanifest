@@ -1,0 +1,35 @@
+{
+  "name": "콕콕 - 배드민턴 예약",
+  "short_name": "콕콕",
+  "description": "배드민턴 동호회 레슨과 게임 순서 예약",
+  "lang": "ko-KR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4f7f4",
+  "theme_color": "#103c32",
+  "categories": ["sports", "productivity"],
+  "icons": [
+    {
+      "src": "/badminton-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "레슨 참석",
+      "short_name": "레슨",
+      "url": "/lesson",
+      "icons": [{ "src": "/badminton-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "게임 참여",
+      "short_name": "게임",
+      "url": "/game",
+      "icons": [{ "src": "/badminton-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}
