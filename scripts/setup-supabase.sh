@@ -54,25 +54,42 @@ else
   npx supabase login
 fi
 
-step 2/7 "Supabase 프로젝트를 연결합니다."
-PROJECT_REF="${SUPABASE_PROJECT_REF:-}"
-if [[ -z "$PROJECT_REF" ]]; then
-  echo "대시보드 주소 https://supabase.com/dashboard/project/<여기가 Project Ref> 를 확인하세요."
-  read -r -p "Project Ref: " PROJECT_REF
+LINKED_REF_FILE="supabase/.temp/project-ref"
+LINKED_REF=""
+[[ -f "$LINKED_REF_FILE" ]] && LINKED_REF="$(cat "$LINKED_REF_FILE")"
+
+# 이미 연결된 프로젝트의 배포 주소만 바꾸는 경우에는
+# 연결과 마이그레이션을 건너뛰어 데이터베이스 비밀번호 없이 실행할 수 있게 한다.
+UPDATE_ONLY=0
+if [[ -n "$APP_URL_OVERRIDE" && -n "$LINKED_REF" ]]; then
+  UPDATE_ONLY=1
 fi
-[[ -n "$PROJECT_REF" ]] || fail "Project Ref 를 입력해야 합니다."
 
-DB_PASSWORD="${SUPABASE_DB_PASSWORD:-}"
-if [[ -z "$DB_PASSWORD" ]]; then
-  read -r -s -p "데이터베이스 비밀번호 (프로젝트 생성 시 입력한 값): " DB_PASSWORD
-  echo
+if [[ "$UPDATE_ONLY" -eq 1 ]]; then
+  PROJECT_REF="$LINKED_REF"
+  step 2/7 "이미 연결된 프로젝트($PROJECT_REF)를 사용합니다."
+  step 3/7 "마이그레이션은 이미 적용되어 건너뜁니다."
+else
+  step 2/7 "Supabase 프로젝트를 연결합니다."
+  PROJECT_REF="${SUPABASE_PROJECT_REF:-$LINKED_REF}"
+  if [[ -z "$PROJECT_REF" ]]; then
+    echo "대시보드 주소 https://supabase.com/dashboard/project/<여기가 Project Ref> 를 확인하세요."
+    read -r -p "Project Ref: " PROJECT_REF
+  fi
+  [[ -n "$PROJECT_REF" ]] || fail "Project Ref 를 입력해야 합니다."
+
+  DB_PASSWORD="${SUPABASE_DB_PASSWORD:-}"
+  if [[ -z "$DB_PASSWORD" ]]; then
+    read -r -s -p "데이터베이스 비밀번호 (프로젝트 생성 시 입력한 값): " DB_PASSWORD
+    echo
+  fi
+  [[ -n "$DB_PASSWORD" ]] || fail "데이터베이스 비밀번호를 입력해야 합니다."
+
+  npx supabase link --project-ref "$PROJECT_REF" --password "$DB_PASSWORD" --yes
+
+  step 3/7 "데이터베이스 마이그레이션을 적용합니다."
+  npx supabase db push --linked --password "$DB_PASSWORD" --yes
 fi
-[[ -n "$DB_PASSWORD" ]] || fail "데이터베이스 비밀번호를 입력해야 합니다."
-
-npx supabase link --project-ref "$PROJECT_REF" --password "$DB_PASSWORD" --yes
-
-step 3/7 "데이터베이스 마이그레이션을 적용합니다."
-npx supabase db push --linked --password "$DB_PASSWORD" --yes
 
 step 4/7 "Edge Function 비밀값을 등록합니다."
 if [[ -n "$APP_URL_OVERRIDE" ]]; then
@@ -148,8 +165,14 @@ EOF
 printf '\n\033[1;32m완료했습니다.\033[0m\n'
 echo "프로젝트 URL: https://${PROJECT_REF}.supabase.co"
 echo
-echo "남은 작업"
-echo "  1. $CRON_FILE 내용을 Supabase SQL Editor 에 붙여 넣고 실행 (레슨 알림 예약)"
-echo "  2. npm run dev 로 실제 서버 연동 확인"
-echo "  3. Cloudflare Pages 에 배포"
-echo "  4. ./scripts/setup-supabase.sh --app-url https://<배포주소> 로 다시 실행"
+
+if [[ "$UPDATE_ONLY" -eq 1 ]]; then
+  echo "배포 주소를 $APP_URL_OVERRIDE 로 반영했습니다."
+  echo "푸시 알림의 링크가 이 주소를 가리킵니다."
+else
+  echo "남은 작업"
+  echo "  1. $CRON_FILE 내용을 Supabase SQL Editor 에 붙여 넣고 실행 (레슨 알림 예약)"
+  echo "  2. npm run dev 로 실제 서버 연동 확인"
+  echo "  3. Cloudflare 에 배포"
+  echo "  4. ./scripts/setup-supabase.sh --app-url https://<배포주소> 로 다시 실행"
+fi
