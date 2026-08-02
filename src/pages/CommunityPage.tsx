@@ -1,6 +1,8 @@
 import {
   CalendarDays,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   Clock3,
   MapPin,
   Megaphone,
@@ -115,22 +117,32 @@ function PostComposer({
               onChange={(event) => setEventTime(event.target.value)}
             />
           </label>
-          <label className="composer-field">
+          <div className="composer-field">
             <span>모집 인원</span>
-            <input
-              required
-              type="number"
-              min={1}
-              max={99}
-              inputMode="numeric"
-              value={capacity}
-              onChange={(event) =>
-                setCapacity(
-                  Math.max(1, Math.min(99, Number(event.target.value) || 1)),
-                )
-              }
-            />
-          </label>
+            <div
+              className="capacity-stepper"
+              role="group"
+              aria-label="모집 인원 조절"
+            >
+              <button
+                type="button"
+                aria-label="인원 줄이기"
+                disabled={capacity <= 1}
+                onClick={() => setCapacity((value) => Math.max(1, value - 1))}
+              >
+                <ChevronDown size={16} />
+              </button>
+              <strong>{capacity}명</strong>
+              <button
+                type="button"
+                aria-label="인원 늘리기"
+                disabled={capacity >= 99}
+                onClick={() => setCapacity((value) => Math.min(99, value + 1))}
+              >
+                <ChevronUp size={16} />
+              </button>
+            </div>
+          </div>
           <label className="composer-field wide">
             <span>장소</span>
             <input
@@ -330,7 +342,9 @@ export function CommunityPage() {
     const param = new URLSearchParams(window.location.search).get('tab')
     return param === 'notice' || param === 'matching' ? param : 'members'
   })
-  const [composing, setComposing] = useState(false)
+  const [composing, setComposing] = useState(
+    () => new URLSearchParams(window.location.search).has('compose'),
+  )
   const [detailMember, setDetailMember] = useState<CommunityMember | null>(
     null,
   )

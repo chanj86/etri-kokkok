@@ -1920,6 +1920,45 @@ ol {
   font-weight: 700;
 }
 
+.capacity-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 4px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.capacity-stepper button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  color: var(--primary);
+  background: var(--info-bg);
+}
+
+.capacity-stepper button:not(:disabled):hover {
+  background: #cfe1fd;
+}
+
+.capacity-stepper button:disabled {
+  color: var(--faint);
+  background: var(--neutral-bg);
+}
+
+.capacity-stepper strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
 .post-list {
   display: flex;
   flex-direction: column;
