@@ -15,20 +15,51 @@ import { formatShortDate } from '../lib/format'
 import type { CommunityMember, TeamRanking } from '../types'
 
 type RecordsTab = 'me' | 'individual' | 'team'
+type RankMode = 'all' | 'singles' | 'doubles'
+
+const RANK_MODES: Array<{ id: RankMode; label: string }> = [
+  { id: 'all', label: '종합' },
+  { id: 'singles', label: '단식' },
+  { id: 'doubles', label: '복식' },
+]
 
 function winRateOf(games: number, wins: number): number {
   return games ? Math.round((wins / games) * 100) : 0
 }
 
+function memberStatsFor(
+  member: CommunityMember,
+  mode: RankMode,
+): { games: number; wins: number; losses: number } {
+  if (mode === 'singles') {
+    const games = member.singlesGames ?? 0
+    const wins = member.singlesWins ?? 0
+    return { games, wins, losses: games - wins }
+  }
+  if (mode === 'doubles') {
+    const games = member.doublesGames ?? 0
+    const wins = member.doublesWins ?? 0
+    return { games, wins, losses: games - wins }
+  }
+  return { games: member.games, wins: member.wins, losses: member.losses }
+}
+
 // 승수 → 승률 → 게임 수 순으로 순위를 매긴다.
-function rankIndividuals(members: CommunityMember[]): CommunityMember[] {
-  return [...members].sort(
-    (a, b) =>
-      b.wins - a.wins ||
-      winRateOf(b.games, b.wins) - winRateOf(a.games, a.wins) ||
-      b.games - a.games ||
-      a.nickname.localeCompare(b.nickname, 'ko'),
-  )
+function rankIndividuals(
+  members: CommunityMember[],
+  mode: RankMode,
+): CommunityMember[] {
+  return [...members].sort((a, b) => {
+    const statsA = memberStatsFor(a, mode)
+    const statsB = memberStatsFor(b, mode)
+    return (
+      statsB.wins - statsA.wins ||
+      winRateOf(statsB.games, statsB.wins) -
+        winRateOf(statsA.games, statsA.wins) ||
+      statsB.games - statsA.games ||
+      a.nickname.localeCompare(b.nickname, 'ko')
+    )
+  })
 }
 
 function RankBadge({ rank }: { rank: number }) {
@@ -49,6 +80,7 @@ export function RecordsPage() {
     const param = new URLSearchParams(window.location.search).get('tab')
     return param === 'individual' || param === 'team' ? param : 'me'
   })
+  const [rankMode, setRankMode] = useState<RankMode>('all')
   const [selectedMember, setSelectedMember] = useState<CommunityMember | null>(
     null,
   )
@@ -64,8 +96,32 @@ export function RecordsPage() {
       slot.status === 'completed' &&
       slot.players.some((player) => player.memberId === member.id),
   )
-  const individualRankings = rankIndividuals(community.members)
+  const individualRankings = rankIndividuals(community.members, rankMode)
   const teamRankings: TeamRanking[] = community.teamRankings
+
+  const myModeRows = [
+    {
+      key: 'all',
+      label: '종합',
+      games: records.games,
+      wins: records.wins,
+      losses: records.losses,
+    },
+    {
+      key: 'singles',
+      label: '단식',
+      games: records.singles?.games ?? 0,
+      wins: records.singles?.wins ?? 0,
+      losses: records.singles?.losses ?? 0,
+    },
+    {
+      key: 'doubles',
+      label: '복식',
+      games: records.doubles?.games ?? 0,
+      wins: records.doubles?.wins ?? 0,
+      losses: records.doubles?.losses ?? 0,
+    },
+  ]
 
   const tabs: Array<{ id: RecordsTab; label: string }> = [
     { id: 'me', label: '내 기록' },
@@ -127,6 +183,35 @@ export function RecordsPage() {
               </small>
             </article>
           </div>
+
+          <section className="panel">
+            <div className="panel-head">
+              <h2>
+                <TrendingUp size={15} />
+                방식별 전적
+              </h2>
+            </div>
+            <div className="ranking-table mode-table">
+              <div className="ranking-table-head">
+                <span>구분</span>
+                <span>게임</span>
+                <span>승-패</span>
+                <span>승률</span>
+              </div>
+              {myModeRows.map((row) => (
+                <div className="ranking-table-row" key={row.key}>
+                  <span className="ranking-name">{row.label}</span>
+                  <span>{row.games}</span>
+                  <span>
+                    {row.wins}-{row.losses}
+                  </span>
+                  <span className="ranking-rate">
+                    {row.games ? `${winRateOf(row.games, row.wins)}%` : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
 
           <section className="panel">
             <div className="panel-head">
@@ -237,6 +322,24 @@ export function RecordsPage() {
             </h2>
             <span className="panel-count">{individualRankings.length}</span>
           </div>
+          <div
+            className="segmented rank-mode-segmented"
+            role="radiogroup"
+            aria-label="랭킹 기준"
+          >
+            {RANK_MODES.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={rankMode === id}
+                className={rankMode === id ? 'active' : ''}
+                onClick={() => setRankMode(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <p className="ranking-hint">
             승수가 많은 순으로, 같으면 승률이 높은 순으로 정렬합니다.
           </p>
@@ -250,38 +353,43 @@ export function RecordsPage() {
                 <span>승-패</span>
                 <span>승률</span>
               </div>
-              {individualRankings.map((entry, index) => (
-                <button
-                  type="button"
-                  className={`ranking-table-row${
-                    entry.memberId === member.id ? ' mine' : ''
-                  }`}
-                  key={entry.memberId}
-                  onClick={() => setSelectedMember(entry)}
-                >
-                  <RankBadge rank={index + 1} />
-                  <span className="ranking-member">
-                    <Avatar
-                      name={entry.nickname}
-                      url={entry.avatarUrl}
-                      size={26}
-                    />
-                    <span className="ranking-name">
-                      {entry.nickname}
-                      {entry.memberId === member.id && (
-                        <em className="me-tag">나</em>
-                      )}
+              {individualRankings.map((entry, index) => {
+                const stats = memberStatsFor(entry, rankMode)
+                return (
+                  <button
+                    type="button"
+                    className={`ranking-table-row${
+                      entry.memberId === member.id ? ' mine' : ''
+                    }`}
+                    key={entry.memberId}
+                    onClick={() => setSelectedMember(entry)}
+                  >
+                    <RankBadge rank={index + 1} />
+                    <span className="ranking-member">
+                      <Avatar
+                        name={entry.nickname}
+                        url={entry.avatarUrl}
+                        size={26}
+                      />
+                      <span className="ranking-name">
+                        {entry.nickname}
+                        {entry.memberId === member.id && (
+                          <em className="me-tag">나</em>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <span>{entry.games}</span>
-                  <span>
-                    {entry.wins}-{entry.losses}
-                  </span>
-                  <span className="ranking-rate">
-                    {entry.games ? `${winRateOf(entry.games, entry.wins)}%` : '—'}
-                  </span>
-                </button>
-              ))}
+                    <span>{stats.games}</span>
+                    <span>
+                      {stats.wins}-{stats.losses}
+                    </span>
+                    <span className="ranking-rate">
+                      {stats.games
+                        ? `${winRateOf(stats.games, stats.wins)}%`
+                        : '—'}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           ) : (
             <EmptyState

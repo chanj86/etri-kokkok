@@ -15,6 +15,10 @@ export function MemberDetailModal({
   const winRate = member.games
     ? Math.round((member.wins / member.games) * 100)
     : 0
+  const singlesGames = member.singlesGames ?? 0
+  const singlesWins = member.singlesWins ?? 0
+  const doublesGames = member.doublesGames ?? 0
+  const doublesWins = member.doublesWins ?? 0
 
   return (
     <div
@@ -70,6 +74,11 @@ export function MemberDetailModal({
             <strong>{member.lessonCount}회</strong>
           </div>
         </div>
+
+        <p className="member-detail-breakdown">
+          단식 {singlesWins}승 {singlesGames - singlesWins}패 · 복식{' '}
+          {doublesWins}승 {doublesGames - doublesWins}패
+        </p>
 
         <p className="member-detail-joined">
           가입일 {formatShortDate(member.joinedAt)}

@@ -131,10 +131,19 @@ export interface PartnerRecord {
   lastPlayedAt: string
 }
 
+export interface ModeRecord {
+  games: number
+  wins: number
+  losses: number
+}
+
 export interface RecordSummary {
   wins: number
   losses: number
   games: number
+  /** 마이그레이션 이전 서버에서는 없을 수 있다 */
+  singles?: ModeRecord
+  doubles?: ModeRecord
   lessonsThisMonth: number
   partnerStats: PartnerRecord[]
 }
@@ -185,6 +194,10 @@ export interface CommunityMember {
   games: number
   wins: number
   losses: number
+  singlesGames?: number
+  singlesWins?: number
+  doublesGames?: number
+  doublesWins?: number
 }
 
 export interface TeamRanking {

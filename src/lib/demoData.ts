@@ -87,6 +87,8 @@ function communityMember(
 ): CommunityMember {
   const games = options.games ?? 0
   const wins = options.wins ?? 0
+  const singlesGames = options.singlesGames ?? 0
+  const singlesWins = options.singlesWins ?? 0
   return {
     memberId,
     nickname,
@@ -99,6 +101,10 @@ function communityMember(
     games,
     wins,
     losses: games - wins,
+    singlesGames,
+    singlesWins,
+    doublesGames: games - singlesGames,
+    doublesWins: wins - singlesWins,
   }
 }
 
@@ -330,6 +336,8 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       lessonCount: 28,
       games: 5,
       wins: 3,
+      singlesGames: 1,
+      singlesWins: 1,
     }),
     communityMember('member-1', '소연', {
       gender: 'female',
@@ -344,6 +352,8 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       lessonCount: 18,
       games: 4,
       wins: 1,
+      singlesGames: 2,
+      singlesWins: 1,
     }),
     communityMember('member-3', '윤아', {
       gender: 'female',
@@ -371,6 +381,8 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       lessonCount: 52,
       games: 12,
       wins: 9,
+      singlesGames: 3,
+      singlesWins: 2,
     }),
     communityMember('member-7', '준서', {
       gender: 'male',
@@ -469,6 +481,8 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       wins: 3,
       losses: 2,
       games: 5,
+      singles: { games: 1, wins: 1, losses: 0 },
+      doubles: { games: 4, wins: 2, losses: 2 },
       lessonsThisMonth: monthlyDates.length,
       partnerStats: [
         {

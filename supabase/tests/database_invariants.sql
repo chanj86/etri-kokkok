@@ -1019,6 +1019,21 @@ begin
     raise exception '회원별 전적 집계가 포함되지 않았습니다.';
   end if;
 
+  -- 방식별 전적: 101은 종합 4게임(단식 1승 1게임, 복식 3게임 2승)이다.
+  if (snapshot -> 'records' ->> 'games')::integer <> 4
+    or (snapshot -> 'records' -> 'singles' ->> 'games')::integer <> 1
+    or (snapshot -> 'records' -> 'singles' ->> 'wins')::integer <> 1
+    or (snapshot -> 'records' -> 'doubles' ->> 'games')::integer <> 3
+    or (snapshot -> 'records' -> 'doubles' ->> 'wins')::integer <> 2 then
+    raise exception '방식별 전적이 스냅샷에 정확히 포함되지 않았습니다.';
+  end if;
+
+  if (
+    snapshot -> 'community' -> 'members' -> 0 ->> 'singlesGames'
+  )::integer <> 1 then
+    raise exception '회원 목록의 방식별 전적이 포함되지 않았습니다.';
+  end if;
+
   -- 게임 방식과 게스트 참가자가 스냅샷에 포함된다.
   if not exists (
     select 1

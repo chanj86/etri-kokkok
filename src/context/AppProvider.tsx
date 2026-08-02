@@ -29,6 +29,7 @@ import {
   type GameSnapshot,
   type GameType,
   type MatchingPostInput,
+  type ModeRecord,
   type Post,
   type PostCategory,
   type ProfileInput,
@@ -116,6 +117,28 @@ function withGameEligibility(
       myAttendanceActive: Boolean(mine?.active),
       myCanJoin: Boolean(mine?.canJoin),
     },
+  }
+}
+
+function adjustModeRecord(
+  record: ModeRecord | undefined,
+  isFirstCompletion: boolean,
+  didWin: boolean,
+  previouslyWon: boolean,
+): ModeRecord {
+  const base = record ?? { games: 0, wins: 0, losses: 0 }
+  if (isFirstCompletion) {
+    return {
+      games: base.games + 1,
+      wins: base.wins + (didWin ? 1 : 0),
+      losses: base.losses + (didWin ? 0 : 1),
+    }
+  }
+  if (previouslyWon === didWin) return base
+  return {
+    ...base,
+    wins: base.wins + (didWin ? 1 : -1),
+    losses: base.losses + (didWin ? -1 : 1),
   }
 }
 
@@ -815,6 +838,8 @@ export function AppProvider({ children }: PropsWithChildren) {
             : undefined
           const didWin = mine?.team === winnerTeam
           const previouslyWon = mine?.team === slot.result?.winnerTeam
+          const modeKey =
+            (slot.gameType ?? 'doubles') === 'singles' ? 'singles' : 'doubles'
           const nextSummary = !mine
             ? current.records
             : isFirstCompletion
@@ -823,6 +848,12 @@ export function AppProvider({ children }: PropsWithChildren) {
                   games: current.records.games + 1,
                   wins: current.records.wins + (didWin ? 1 : 0),
                   losses: current.records.losses + (didWin ? 0 : 1),
+                  [modeKey]: adjustModeRecord(
+                    current.records[modeKey],
+                    true,
+                    Boolean(didWin),
+                    Boolean(previouslyWon),
+                  ),
                 }
               : previouslyWon === didWin
                 ? current.records
@@ -830,6 +861,12 @@ export function AppProvider({ children }: PropsWithChildren) {
                     ...current.records,
                     wins: current.records.wins + (didWin ? 1 : -1),
                     losses: current.records.losses + (didWin ? -1 : 1),
+                    [modeKey]: adjustModeRecord(
+                      current.records[modeKey],
+                      false,
+                      Boolean(didWin),
+                      Boolean(previouslyWon),
+                    ),
                   }
           const nextRecords = mine
             ? updateDemoPartnerRecord(

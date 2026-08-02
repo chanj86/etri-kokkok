@@ -937,6 +937,16 @@ ol {
   font-size: 14px;
 }
 
+.member-detail-breakdown {
+  margin-top: 8px;
+  padding: 5px 8px;
+  border-radius: var(--radius);
+  color: var(--neutral-text);
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .member-detail-joined {
   margin-top: 10px;
   color: var(--faint);
@@ -2487,6 +2497,15 @@ button.ranking-table-row:hover {
   font-weight: 700;
 }
 
+.mode-table .ranking-table-head,
+.mode-table .ranking-table-row {
+  grid-template-columns: minmax(0, 1fr) 0.6fr 0.8fr 0.7fr;
+}
+
+.rank-mode-segmented {
+  margin-bottom: 8px;
+}
+
 /* ── 프로필 ───────────────────────────────────────────── */
 
 .profile-summary {
@@ -2809,7 +2828,8 @@ fieldset.field {
     grid-template-columns: minmax(0, 1.1fr) 0.5fr 0.8fr 1fr;
   }
 
-  .partner-date {
+  .partner-date,
+  .partner-table-head span:nth-child(5) {
     display: none;
   }
 
@@ -2822,6 +2842,17 @@ fieldset.field {
   .ranking-table-head span:nth-child(3),
   .ranking-table-row > span:nth-child(3) {
     display: none;
+  }
+
+  /* 방식별 전적 표는 열이 4개뿐이라 모두 유지한다 */
+  .mode-table .ranking-table-head,
+  .mode-table .ranking-table-row {
+    grid-template-columns: minmax(0, 1fr) 0.6fr 0.8fr 0.7fr;
+  }
+
+  .mode-table .ranking-table-head span:nth-child(3),
+  .mode-table .ranking-table-row > span:nth-child(3) {
+    display: block;
   }
 
   .install-card {
