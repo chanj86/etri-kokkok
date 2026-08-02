@@ -68,6 +68,10 @@ export async function fetchSnapshot(): Promise<AppSnapshot> {
   return {
     ...snapshot,
     // 데이터베이스 마이그레이션이 아직 적용되지 않은 순간에도 화면이 동작하도록 기본값을 채운다.
+    lesson: {
+      ...snapshot.lesson,
+      monthlyDates: snapshot.lesson?.monthlyDates ?? [],
+    },
     community: {
       members: snapshot.community?.members ?? [],
       notices: snapshot.community?.notices ?? [],

@@ -2122,6 +2122,54 @@ ol {
   background: var(--info-bg);
 }
 
+/* ── 레슨 참여 달력 ────────────────────────────────────── */
+
+.lesson-calendar .panel-head {
+  margin-bottom: 4px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 3px;
+  justify-items: center;
+}
+
+.calendar-weekday {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+}
+
+.calendar-weekday:first-child {
+  color: var(--danger-text);
+}
+
+.calendar-day {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid transparent;
+  border-radius: 50%;
+  color: var(--neutral-text);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.calendar-day.attended {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.calendar-day.today:not(.attended) {
+  color: var(--info-text);
+  background: var(--info-bg);
+  font-weight: 700;
+}
+
 /* ── 기록 ─────────────────────────────────────────────── */
 
 .partner-table {

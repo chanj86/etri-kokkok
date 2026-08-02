@@ -17,6 +17,7 @@ import {
   uploadAvatarPhoto,
 } from '../lib/api'
 import { createDemoSnapshot } from '../lib/demoData'
+import { toSeoulDateKey } from '../lib/format'
 import { calculateSkillScore } from '../lib/gameMatching'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import type {
@@ -369,6 +370,7 @@ export function AppProvider({ children }: PropsWithChildren) {
             status: 'waiting' as const,
             isMine: true,
           }
+          const todayKey = toSeoulDateKey()
           return refreshLessonQueue({
             ...current,
             lesson: {
@@ -376,6 +378,9 @@ export function AppProvider({ children }: PropsWithChildren) {
               queue: [...current.lesson.queue, booking],
               myBooking: booking,
               monthlyCount: current.lesson.monthlyCount + 1,
+              monthlyDates: current.lesson.monthlyDates.includes(todayKey)
+                ? current.lesson.monthlyDates
+                : [...current.lesson.monthlyDates, todayKey].sort(),
             },
             records: {
               ...current.records,
@@ -424,6 +429,7 @@ export function AppProvider({ children }: PropsWithChildren) {
           if (!current.lesson.myBooking) {
             throw new Error('취소할 레슨 참석이 없습니다.')
           }
+          const todayKey = toSeoulDateKey()
           return refreshLessonQueue({
             ...current,
             lesson: {
@@ -433,6 +439,9 @@ export function AppProvider({ children }: PropsWithChildren) {
               ),
               myBooking: null,
               monthlyCount: Math.max(0, current.lesson.monthlyCount - 1),
+              monthlyDates: current.lesson.monthlyDates.filter(
+                (dateKey) => dateKey !== todayKey,
+              ),
             },
             records: {
               ...current.records,

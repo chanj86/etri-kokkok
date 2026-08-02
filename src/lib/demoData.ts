@@ -103,6 +103,16 @@ function communityMember(
 
 export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
   const today = toSeoulDateKey()
+
+  // 이번 달 안에서 오늘 포함 최대 4일의 참석 이력을 만든다.
+  const monthlyDates = [0, 2, 4, 6]
+    .map((offset) => {
+      const date = new Date()
+      date.setDate(date.getDate() - offset)
+      return toSeoulDateKey(date)
+    })
+    .filter((dateKey) => dateKey.slice(0, 7) === today.slice(0, 7))
+    .sort()
   const lessonQueue = [
     lessonBooking('lesson-1', 'member-1', '소연', 1),
     lessonBooking('lesson-2', 'member-2', '현우', 2),
@@ -433,7 +443,8 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       canJoin: true,
       queue: lessonQueue,
       myBooking: lessonQueue[2],
-      monthlyCount: 4,
+      monthlyCount: monthlyDates.length,
+      monthlyDates,
     },
     game: {
       dayId: 'demo-game-day',
@@ -454,7 +465,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       wins: 3,
       losses: 2,
       games: 5,
-      lessonsThisMonth: 4,
+      lessonsThisMonth: monthlyDates.length,
       partnerStats: [
         {
           memberId: 'member-1',

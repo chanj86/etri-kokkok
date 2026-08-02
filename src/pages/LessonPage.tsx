@@ -10,10 +10,11 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ShuttlecockIcon } from '../components/ShuttlecockIcon'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
-import { formatTime } from '../lib/format'
+import { formatTime, toSeoulDateKey } from '../lib/format'
 import { LESSON_DURATION_MINUTES, minutesUntil } from '../lib/lessonSchedule'
 
 const LESSON_MS = LESSON_DURATION_MINUTES * 60_000
+const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
 function useNow(intervalMs = 30_000): number {
   const [now, setNow] = useState(() => Date.now())
@@ -49,6 +50,23 @@ export function LessonPage() {
   const myLessonInProgress = lesson.myBooking
     ? isInProgress(lesson.myBooking.estimatedStartAt, now)
     : false
+
+  // 이번 달 달력: 참석한 날에 동그라미 표시
+  const todayKey = toSeoulDateKey()
+  const calendarYear = Number(todayKey.slice(0, 4))
+  const calendarMonth = Number(todayKey.slice(5, 7))
+  const todayDay = Number(todayKey.slice(8, 10))
+  const attendedDays = new Set(
+    lesson.monthlyDates
+      .filter((dateKey) => dateKey.slice(0, 7) === todayKey.slice(0, 7))
+      .map((dateKey) => Number(dateKey.slice(8, 10))),
+  )
+  const firstWeekday = new Date(calendarYear, calendarMonth - 1, 1).getDay()
+  const daysInMonth = new Date(calendarYear, calendarMonth, 0).getDate()
+  const calendarCells: Array<number | null> = [
+    ...Array.from({ length: firstWeekday }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+  ]
 
   return (
     <div className="page-stack">
@@ -179,6 +197,41 @@ export function LessonPage() {
         >
           알림 켜기
         </button>
+      </section>
+
+      <section className="panel lesson-calendar">
+        <div className="panel-head">
+          <h2>
+            <CalendarDays size={15} />
+            {calendarMonth}월 참여 이력
+          </h2>
+          <span className="panel-count">{lesson.monthlyCount}회</span>
+        </div>
+        <div
+          className="calendar-grid"
+          role="img"
+          aria-label={`이번 달 레슨 ${lesson.monthlyCount}회 참석`}
+        >
+          {WEEKDAY_LABELS.map((weekday) => (
+            <span className="calendar-weekday" key={weekday}>
+              {weekday}
+            </span>
+          ))}
+          {calendarCells.map((day, index) =>
+            day === null ? (
+              <span className="calendar-day empty" key={`empty-${index}`} />
+            ) : (
+              <span
+                key={day}
+                className={`calendar-day${
+                  attendedDays.has(day) ? ' attended' : ''
+                }${day === todayDay ? ' today' : ''}`}
+              >
+                {day}
+              </span>
+            ),
+          )}
+        </div>
       </section>
 
       <ConfirmDialog

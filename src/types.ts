@@ -40,6 +40,8 @@ export interface LessonSnapshot {
   queue: LessonBooking[]
   myBooking: LessonBooking | null
   monthlyCount: number
+  /** 이번 달 레슨 참석 날짜 목록 (YYYY-MM-DD) */
+  monthlyDates: string[]
 }
 
 export interface GameAttendance {

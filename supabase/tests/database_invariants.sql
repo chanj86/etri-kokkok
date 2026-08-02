@@ -914,6 +914,13 @@ begin
     raise exception '회원별 전적 집계가 포함되지 않았습니다.';
   end if;
 
+  -- 이번 달 레슨 참석 날짜 목록: 101은 오늘 1회 참석했다.
+  if jsonb_array_length(snapshot -> 'lesson' -> 'monthlyDates') <> 1
+    or (snapshot -> 'lesson' -> 'monthlyDates' ->> 0)
+      <> to_char(public.seoul_today(), 'YYYY-MM-DD') then
+    raise exception '이번 달 레슨 참석 날짜가 스냅샷에 포함되지 않았습니다.';
+  end if;
+
   -- 매칭 글: 일정·정원·참석자 정보가 스냅샷에 포함돼야 한다.
   if (
     snapshot -> 'community' -> 'matching' -> 0 ->> 'capacity'
