@@ -65,6 +65,9 @@ declare
   third_slot uuid;
   ahead_slot uuid;
   reuse_slot uuid;
+  singles_slot uuid;
+  guest_slot uuid;
+  guest_player uuid;
   current_round integer;
   member_101_cycle integer;
   member_101_games integer;
@@ -398,7 +401,109 @@ begin
   reuse_slot := public.create_game_slot('코트 C');
   perform public.cancel_game_slot(reuse_slot);
 
+  -- 단식 게임: 1:1 두 명이 모이면 시작할 수 있다. ---------------------------
+  singles_slot := public.create_game_slot('코트 B', 'singles');
+  perform public.join_game_slot(singles_slot);
+
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000102',
+    true
+  );
+  perform public.join_game_slot(singles_slot);
+
+  -- 단식 정원(2명) 초과 참여는 차단된다.
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000103',
+    true
+  );
+  blocked := false;
+  begin
+    perform public.join_game_slot(singles_slot);
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '단식 정원 초과 참여가 차단되지 않았습니다.';
+  end if;
+
+  perform public.start_game_slot(singles_slot);
+  perform public.complete_game_slot(singles_slot, 21, 15);
+
+  if (
+    select games_played
+    from public.game_attendances
+    where member_id = '00000000-0000-0000-0000-000000000101'
+      and game_day_id = (
+        select id
+        from public.game_days
+        where club_id = '00000000-0000-0000-0000-000000000001'
+          and game_date = public.seoul_today()
+      )
+  ) <> 4 then
+    raise exception '단식 게임 완료가 전적에 반영되지 않았습니다.';
+  end if;
+
+  -- 게스트: 회원이 아닌 게스트를 추가해 게임을 시작할 수 있다. ----------------
+  guest_slot := public.create_game_slot('코트 C');
+  perform public.join_game_slot(guest_slot);
+
+  guest_player := public.add_guest_player(guest_slot, '게스트김');
+  perform public.remove_guest_player(guest_slot, guest_player);
+  guest_player := public.add_guest_player(guest_slot, '게스트김');
+  perform public.add_guest_player(guest_slot, '게스트리');
+
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000104',
+    true
+  );
+  perform public.join_game_slot(guest_slot);
+
+  -- 정원이 차면 게스트도 더 추가할 수 없다.
+  blocked := false;
+  begin
+    perform public.add_guest_player(guest_slot, '초과 게스트');
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '정원 초과 게스트 추가가 차단되지 않았습니다.';
+  end if;
+
+  perform public.start_game_slot(guest_slot);
+  perform public.complete_game_slot(guest_slot, 21, 10);
+
+  if (
+    select count(*)
+    from public.game_slot_players
+    where slot_id = guest_slot
+      and member_id is null
+  ) <> 2 then
+    raise exception '게스트 참가자가 저장되지 않았습니다.';
+  end if;
+
+  if (
+    select games_played
+    from public.game_attendances
+    where member_id = '00000000-0000-0000-0000-000000000104'
+      and game_day_id = (
+        select id
+        from public.game_days
+        where club_id = '00000000-0000-0000-0000-000000000001'
+          and game_date = public.seoul_today()
+      )
+  ) <> 4 then
+    raise exception '게스트 게임 완료가 회원 전적에 반영되지 않았습니다.';
+  end if;
+
   -- 게시판: 공지는 관리자만, 매칭 글은 모두 작성할 수 있다. -----------------
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000101',
+    true
+  );
   notice_id := public.create_post(
     'notice',
     '이번 주 운영 안내',
@@ -912,6 +1017,24 @@ begin
 
   if (snapshot -> 'community' -> 'members' -> 0) ->> 'games' is null then
     raise exception '회원별 전적 집계가 포함되지 않았습니다.';
+  end if;
+
+  -- 게임 방식과 게스트 참가자가 스냅샷에 포함된다.
+  if not exists (
+    select 1
+    from jsonb_array_elements(snapshot -> 'game' -> 'slots') as slot_json
+    where slot_json ->> 'gameType' = 'singles'
+  ) then
+    raise exception '단식 게임 방식이 스냅샷에 포함되지 않았습니다.';
+  end if;
+
+  if (
+    select count(*)
+    from jsonb_array_elements(snapshot -> 'game' -> 'slots') as slot_json,
+      jsonb_array_elements(slot_json -> 'players') as player
+    where (player ->> 'isGuest')::boolean
+  ) <> 2 then
+    raise exception '게스트 참가자가 스냅샷에 포함되지 않았습니다.';
   end if;
 
   -- 이번 달 레슨 참석 날짜 목록: 101은 오늘 1회 참석했다.

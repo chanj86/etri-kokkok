@@ -25,10 +25,12 @@ import { formatExperience, formatWaitTime } from '../lib/format'
 import { buildAutoArrangement } from '../lib/gameMatching'
 import {
   LESSON_COURT,
+  gameSlotCapacity,
   type AutoArrangement,
   type CommunityMember,
   type CourtName,
   type GameSlot,
+  type GameType,
   type Team,
 } from '../types'
 
@@ -41,8 +43,19 @@ function useNow(intervalMs = 30_000): number {
   return now
 }
 
-function TeamColumn({ team, slot }: { team: Team; slot: GameSlot }) {
+function TeamColumn({
+  team,
+  slot,
+  busy,
+  onRemoveGuest,
+}: {
+  team: Team
+  slot: GameSlot
+  busy: boolean
+  onRemoveGuest?: (playerId: string) => void
+}) {
   const players = slot.players.filter((player) => player.team === team)
+  const seats = gameSlotCapacity(slot.gameType ?? 'doubles') / 2
   return (
     <div className={`team-column team-${team.toLowerCase()}`}>
       <div className="team-title">
@@ -53,12 +66,27 @@ function TeamColumn({ team, slot }: { team: Team; slot: GameSlot }) {
           </strong>
         )}
       </div>
-      {[0, 1].map((index) => {
+      {Array.from({ length: seats }, (_, index) => {
         const player = players[index]
         return player ? (
-          <div className="player-chip" key={player.id}>
+          <div
+            className={`player-chip${player.isGuest ? ' guest' : ''}`}
+            key={player.id}
+          >
             <span>{player.nickname.slice(0, 1)}</span>
             <strong>{player.nickname}</strong>
+            {player.isGuest && <em className="guest-tag">게스트</em>}
+            {player.isGuest && slot.status === 'open' && onRemoveGuest && (
+              <button
+                className="chip-remove"
+                type="button"
+                aria-label={`게스트 ${player.nickname} 제외`}
+                disabled={busy}
+                onClick={() => onRemoveGuest(player.id)}
+              >
+                <X size={11} />
+              </button>
+            )}
           </div>
         ) : (
           <div className="player-chip empty" key={`empty-${team}-${index}`}>
@@ -82,6 +110,8 @@ function SlotCard({
   onStart,
   onComplete,
   onDeleteRequest,
+  onAddGuest,
+  onRemoveGuest,
 }: {
   slot: GameSlot
   memberId: string
@@ -91,6 +121,8 @@ function SlotCard({
   onStart: () => void
   onComplete: (teamAScore: number, teamBScore: number) => void
   onDeleteRequest: () => void
+  onAddGuest?: (guestName: string) => void
+  onRemoveGuest?: (playerId: string) => void
 }) {
   const [teamAScore, setTeamAScore] = useState(
     String(slot.result?.teamAScore ?? 21),
@@ -99,8 +131,11 @@ function SlotCard({
     String(slot.result?.teamBScore ?? 15),
   )
   const [editingResult, setEditingResult] = useState(false)
+  const [guestFormOpen, setGuestFormOpen] = useState(false)
+  const [guestName, setGuestName] = useState('')
   const mine = slot.players.some((player) => player.memberId === memberId)
-  const isFull = slot.players.length === 4
+  const capacity = gameSlotCapacity(slot.gameType ?? 'doubles')
+  const isFull = slot.players.length >= capacity
 
   const submitScore = (event: FormEvent) => {
     event.preventDefault()
@@ -108,11 +143,22 @@ function SlotCard({
     setEditingResult(false)
   }
 
+  const submitGuest = (event: FormEvent) => {
+    event.preventDefault()
+    if (!guestName.trim() || !onAddGuest) return
+    onAddGuest(guestName.trim())
+    setGuestName('')
+    setGuestFormOpen(false)
+  }
+
   return (
     <article className={`game-slot-card ${slot.status}`}>
       <div className="slot-head">
         <div className="slot-head-info">
           <strong>{slot.courtName}</strong>
+          <span className="lozenge">
+            {slot.gameType === 'singles' ? '단식' : '복식'}
+          </span>
           <span
             className={`lozenge ${
               slot.status === 'playing'
@@ -122,7 +168,8 @@ function SlotCard({
                   : 'inprogress'
             }`}
           >
-            {slot.status === 'open' && `모집중 ${slot.players.length}/4`}
+            {slot.status === 'open' &&
+              `모집중 ${slot.players.length}/${capacity}`}
             {slot.status === 'playing' && '게임중'}
             {slot.status === 'completed' && '종료'}
           </span>
@@ -142,9 +189,19 @@ function SlotCard({
       </div>
 
       <div className="versus-grid">
-        <TeamColumn team="A" slot={slot} />
+        <TeamColumn
+          team="A"
+          slot={slot}
+          busy={busy}
+          onRemoveGuest={onRemoveGuest}
+        />
         <div className="versus-mark">VS</div>
-        <TeamColumn team="B" slot={slot} />
+        <TeamColumn
+          team="B"
+          slot={slot}
+          busy={busy}
+          onRemoveGuest={onRemoveGuest}
+        />
       </div>
 
       {slot.status === 'open' && (
@@ -170,6 +227,17 @@ function SlotCard({
               {isFull ? '모집 완료' : '게임 참여'}
             </button>
           )}
+          {onAddGuest && (
+            <button
+              className="button subtle"
+              type="button"
+              disabled={busy || isFull}
+              onClick={() => setGuestFormOpen((open) => !open)}
+            >
+              <UserPlus size={14} />
+              게스트 추가
+            </button>
+          )}
           <button
             className="button subtle"
             type="button"
@@ -180,6 +248,28 @@ function SlotCard({
             게임 시작
           </button>
         </div>
+      )}
+
+      {slot.status === 'open' && guestFormOpen && onAddGuest && (
+        <form className="guest-form" onSubmit={submitGuest}>
+          <input
+            required
+            maxLength={20}
+            placeholder="게스트 이름"
+            value={guestName}
+            onChange={(event) => setGuestName(event.target.value)}
+          />
+          <button className="button primary" type="submit" disabled={busy}>
+            추가
+          </button>
+          <button
+            className="button subtle"
+            type="button"
+            onClick={() => setGuestFormOpen(false)}
+          >
+            취소
+          </button>
+        </form>
       )}
 
       {slot.status === 'completed' && !editingResult && (
@@ -309,6 +399,8 @@ export function GamePage() {
     createGameSlot,
     joinGameSlot,
     leaveGameSlot,
+    addGuestPlayer,
+    removeGuestPlayer,
     startGameSlot,
     completeGameSlot,
     cancelGameSlot,
@@ -316,6 +408,7 @@ export function GamePage() {
   } = useApp()
   const now = useNow()
   const [selectedCourt, setSelectedCourt] = useState<CourtName | null>(null)
+  const [newGameType, setNewGameType] = useState<GameType>('doubles')
   const [lessonCourtConfirm, setLessonCourtConfirm] =
     useState<CourtName | null>(null)
   const [joinConfirm, setJoinConfirm] = useState<{
@@ -393,6 +486,10 @@ export function GamePage() {
       setAutoError('먼저 배치도에서 비어 있는 코트를 선택해 주세요.')
       return
     }
+    if (newGameType === 'singles') {
+      setAutoError('자동 배치는 복식 게임에서만 사용할 수 있습니다.')
+      return
+    }
     const next = buildAutoArrangement(
       game.attendees,
       game.currentCycle,
@@ -412,8 +509,9 @@ export function GamePage() {
       return
     }
     setAutoError(null)
-    await createGameSlot(selectedCourt)
+    await createGameSlot(selectedCourt, newGameType)
     setSelectedCourt(null)
+    setNewGameType('doubles')
   }
 
   const confirmAuto = async () => {
@@ -468,6 +566,32 @@ export function GamePage() {
               ? `${selectedCourt} 선택됨 - 게임 방식을 선택하세요.`
               : '비어 있는 코트를 눌러 새 게임을 만들 수 있습니다.'}
           </p>
+          {selectedCourt && (
+            <div
+              className="segmented game-type-segmented"
+              role="radiogroup"
+              aria-label="게임 방식"
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={newGameType === 'doubles'}
+                className={newGameType === 'doubles' ? 'active' : ''}
+                onClick={() => setNewGameType('doubles')}
+              >
+                복식 2:2
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={newGameType === 'singles'}
+                className={newGameType === 'singles' ? 'active' : ''}
+                onClick={() => setNewGameType('singles')}
+              >
+                단식 1:1
+              </button>
+            </div>
+          )}
           <div className="court-create-actions">
             <button
               className="button primary"
@@ -481,7 +605,12 @@ export function GamePage() {
             <button
               className="button subtle"
               type="button"
-              disabled={busy || !selectedCourt || selectedCourtBusy}
+              disabled={
+                busy ||
+                !selectedCourt ||
+                selectedCourtBusy ||
+                newGameType === 'singles'
+              }
               onClick={generateAuto}
             >
               <Sparkles size={14} />
@@ -521,6 +650,12 @@ export function GamePage() {
                   onStart={() => void startGameSlot(slot.id)}
                   onComplete={(a, b) => void completeGameSlot(slot.id, a, b)}
                   onDeleteRequest={() => setDeleteConfirm(slot)}
+                  onAddGuest={(guestName) =>
+                    void addGuestPlayer(slot.id, guestName)
+                  }
+                  onRemoveGuest={(playerId) =>
+                    void removeGuestPlayer(slot.id, playerId)
+                  }
                 />
               ))}
             </div>

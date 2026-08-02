@@ -1710,8 +1710,75 @@ ol {
   font-weight: 500;
 }
 
+.player-chip.guest > span {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+}
+
+.guest-tag {
+  flex: 0 0 auto;
+  padding: 0 5px;
+  border-radius: 3px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.chip-remove {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--neutral-bg);
+}
+
+.chip-remove:not(:disabled):hover {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.guest-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.guest-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius);
+  outline: 0;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.guest-form input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.game-type-segmented {
+  flex: 0 0 auto;
+}
+
+.game-type-segmented button {
+  min-width: 74px;
+}
+
 .slot-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
 }

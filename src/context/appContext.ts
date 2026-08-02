@@ -3,6 +3,7 @@ import type {
   AppSnapshot,
   AuthInput,
   AutoArrangement,
+  GameType,
   MatchingPostInput,
   PostCategory,
   ProfileInput,
@@ -29,9 +30,11 @@ export interface AppContextValue {
   delayLesson: () => Promise<void>
   cancelLesson: () => Promise<void>
   setGameAttendance: (active: boolean) => Promise<void>
-  createGameSlot: (courtName: string) => Promise<void>
+  createGameSlot: (courtName: string, gameType?: GameType) => Promise<void>
   joinGameSlot: (slotId: string) => Promise<void>
   leaveGameSlot: (slotId: string) => Promise<void>
+  addGuestPlayer: (slotId: string, guestName: string) => Promise<void>
+  removeGuestPlayer: (slotId: string, playerId: string) => Promise<void>
   startGameSlot: (slotId: string) => Promise<void>
   completeGameSlot: (
     slotId: string,

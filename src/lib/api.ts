@@ -2,6 +2,7 @@ import type {
   AppSnapshot,
   AuthInput,
   AutoArrangement,
+  GameType,
   MatchingPostInput,
   PartnerRecord,
   PostCategory,
@@ -103,10 +104,23 @@ export const lessonApi = {
 export const gameApi = {
   setAttendance: (active: boolean) =>
     runAction('set_game_attendance', { p_active: active }),
-  createSlot: (courtName: string) =>
-    runAction('create_game_slot', { p_court_name: courtName }),
+  createSlot: (courtName: string, gameType: GameType = 'doubles') =>
+    runAction('create_game_slot', {
+      p_court_name: courtName,
+      p_game_type: gameType,
+    }),
   joinSlot: (slotId: string) =>
     runAction('join_game_slot', { p_slot_id: slotId }),
+  addGuest: (slotId: string, guestName: string) =>
+    runAction('add_guest_player', {
+      p_slot_id: slotId,
+      p_guest_name: guestName,
+    }),
+  removeGuest: (slotId: string, playerId: string) =>
+    runAction('remove_guest_player', {
+      p_slot_id: slotId,
+      p_player_id: playerId,
+    }),
   leaveSlot: (slotId: string) =>
     runAction('leave_game_slot', { p_slot_id: slotId }),
   startSlot: (slotId: string) =>

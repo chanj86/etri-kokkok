@@ -73,6 +73,7 @@ function player(
     id: `player-${memberId}-${joinedCycle}`,
     memberId,
     nickname,
+    isGuest: false,
     team,
     joinedCycle,
     skillScore: calculateSkillScore(experienceMonths, lessonCount),
@@ -194,6 +195,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
   const completedSlot: GameSlot = {
     id: 'slot-completed',
     courtName: '코트 B',
+    gameType: 'doubles',
     status: 'completed',
     source: 'manual',
     createdAt: isoFromNow(-65),
@@ -214,6 +216,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
   const playingSlot: GameSlot = {
     id: 'slot-playing',
     courtName: '코트 C',
+    gameType: 'doubles',
     status: 'playing',
     source: 'manual',
     createdAt: isoFromNow(-25),
@@ -230,6 +233,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
   const openSlot: GameSlot = {
     id: 'slot-open',
     courtName: '코트 B',
+    gameType: 'doubles',
     status: 'open',
     source: 'manual',
     createdAt: isoFromNow(-4),

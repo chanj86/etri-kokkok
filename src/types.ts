@@ -3,6 +3,11 @@ export type MemberRole = 'owner' | 'member'
 export type LessonStatus = 'waiting' | 'completed' | 'cancelled'
 export type GameSlotStatus = 'open' | 'playing' | 'completed' | 'cancelled'
 export type Team = 'A' | 'B'
+export type GameType = 'singles' | 'doubles'
+
+export function gameSlotCapacity(gameType: GameType): number {
+  return gameType === 'singles' ? 2 : 4
+}
 
 export type CourtName = '코트 A' | '코트 B' | '코트 C'
 
@@ -61,8 +66,10 @@ export interface GameAttendance {
 
 export interface GamePlayer {
   id: string
-  memberId: string
+  /** 게스트는 null */
+  memberId: string | null
   nickname: string
+  isGuest?: boolean
   team: Team
   joinedCycle: number
   skillScore: number
@@ -77,6 +84,8 @@ export interface GameResult {
 export interface GameSlot {
   id: string
   courtName: string
+  /** 마이그레이션 이전 데이터는 없을 수 있으므로 복식으로 간주 */
+  gameType?: GameType
   status: GameSlotStatus
   source: 'manual' | 'auto'
   createdAt: string

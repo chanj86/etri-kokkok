@@ -1,4 +1,9 @@
-import { COURT_NAMES, type CourtName, type GameSlot } from '../types'
+import {
+  COURT_NAMES,
+  gameSlotCapacity,
+  type CourtName,
+  type GameSlot,
+} from '../types'
 
 type CourtStatus = 'free' | 'open' | 'playing'
 
@@ -6,6 +11,7 @@ interface CourtInfo {
   name: CourtName
   status: CourtStatus
   playerCount: number
+  capacity: number
   elapsedLabel: string | null
 }
 
@@ -31,7 +37,9 @@ function formatElapsed(startedAt: string, now: number): string {
 
 function statusLabel(court: CourtInfo): string {
   if (court.status === 'playing') return '게임중'
-  if (court.status === 'open') return `모집중 ${court.playerCount}/4`
+  if (court.status === 'open') {
+    return `모집중 ${court.playerCount}/${court.capacity}`
+  }
   return '사용 가능'
 }
 
@@ -43,13 +51,21 @@ export function resolveCourts(slots: GameSlot[], now: number): CourtInfo[] {
         (slot.status === 'open' || slot.status === 'playing'),
     )
     if (!activeSlot) {
-      return { name, status: 'free' as const, playerCount: 0, elapsedLabel: null }
+      return {
+        name,
+        status: 'free' as const,
+        playerCount: 0,
+        capacity: 4,
+        elapsedLabel: null,
+      }
     }
+    const capacity = gameSlotCapacity(activeSlot.gameType ?? 'doubles')
     if (activeSlot.status === 'playing') {
       return {
         name,
         status: 'playing' as const,
         playerCount: activeSlot.players.length,
+        capacity,
         elapsedLabel: activeSlot.startedAt
           ? formatElapsed(activeSlot.startedAt, now)
           : null,
@@ -59,6 +75,7 @@ export function resolveCourts(slots: GameSlot[], now: number): CourtInfo[] {
       name,
       status: 'open' as const,
       playerCount: activeSlot.players.length,
+      capacity,
       elapsedLabel: null,
     }
   })

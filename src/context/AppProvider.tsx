@@ -20,17 +20,19 @@ import { createDemoSnapshot } from '../lib/demoData'
 import { toSeoulDateKey } from '../lib/format'
 import { calculateSkillScore } from '../lib/gameMatching'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
-import type {
-  AppSnapshot,
-  AuthInput,
-  AutoArrangement,
-  GamePlayer,
-  GameSnapshot,
-  MatchingPostInput,
-  Post,
-  PostCategory,
-  ProfileInput,
-  RecordSummary,
+import {
+  gameSlotCapacity,
+  type AppSnapshot,
+  type AuthInput,
+  type AutoArrangement,
+  type GamePlayer,
+  type GameSnapshot,
+  type GameType,
+  type MatchingPostInput,
+  type Post,
+  type PostCategory,
+  type ProfileInput,
+  type RecordSummary,
 } from '../types'
 import { AppContext, type AppNotice } from './appContext'
 
@@ -138,12 +140,18 @@ function updateDemoPartnerRecord(
   previouslyWon: boolean,
   playedAt: string,
 ): RecordSummary {
-  if (!teammate || (!isFirstCompletion && previouslyWon === didWin)) {
+  // 게스트 파트너는 회원 전적에 집계하지 않는다.
+  if (
+    !teammate ||
+    teammate.memberId === null ||
+    (!isFirstCompletion && previouslyWon === didWin)
+  ) {
     return records
   }
+  const teammateMemberId = teammate.memberId
 
   const existing = records.partnerStats.find(
-    (partner) => partner.memberId === teammate.memberId,
+    (partner) => partner.memberId === teammateMemberId,
   )
   const games = existing?.games ?? 0
   const wins = existing?.wins ?? 0
@@ -156,7 +164,7 @@ function updateDemoPartnerRecord(
     ? losses + (didWin ? 0 : 1)
     : losses + (didWin ? -1 : 1)
   const nextPartner = {
-    memberId: teammate.memberId,
+    memberId: teammateMemberId,
     nickname: teammate.nickname,
     games: nextGames,
     wins: nextWins,
@@ -168,7 +176,7 @@ function updateDemoPartnerRecord(
   }
   const partnerStats = [
     ...records.partnerStats.filter(
-      (partner) => partner.memberId !== teammate.memberId,
+      (partner) => partner.memberId !== teammateMemberId,
     ),
     nextPartner,
   ].sort(
@@ -523,11 +531,11 @@ export function AppProvider({ children }: PropsWithChildren) {
   )
 
   const createGameSlot = useCallback(
-    (courtName: string) =>
+    (courtName: string, gameType: GameType = 'doubles') =>
       runAction(
         'game-create-slot',
-        `${courtName}에 게임을 열었습니다.`,
-        () => gameApi.createSlot(courtName),
+        `${courtName}에 ${gameType === 'singles' ? '단식' : '복식'} 게임을 열었습니다.`,
+        () => gameApi.createSlot(courtName, gameType),
         (current) => {
           const courtBusy = current.game.slots.some(
             (slot) =>
@@ -543,6 +551,7 @@ export function AppProvider({ children }: PropsWithChildren) {
               {
                 id: crypto.randomUUID(),
                 courtName,
+                gameType,
                 status: 'open',
                 source: 'manual',
                 createdAt: new Date().toISOString(),
@@ -572,7 +581,10 @@ export function AppProvider({ children }: PropsWithChildren) {
           if (!slot || slot.status !== 'open') {
             throw new Error('참여할 수 없는 슬롯입니다.')
           }
-          if (slot.players.length >= 4) throw new Error('슬롯이 가득 찼습니다.')
+          const capacity = gameSlotCapacity(slot.gameType ?? 'doubles')
+          if (slot.players.length >= capacity) {
+            throw new Error('게임 인원이 이미 가득 찼습니다.')
+          }
           if (!attendance?.active) {
             throw new Error('먼저 오늘 게임 참석을 눌러 주세요.')
           }
@@ -587,11 +599,16 @@ export function AppProvider({ children }: PropsWithChildren) {
             throw new Error('이미 다른 열린 게임에 참여 중입니다.')
           }
 
+          const teamACount = slot.players.filter(
+            (player) => player.team === 'A',
+          ).length
           const player = {
             id: crypto.randomUUID(),
             memberId: current.member.id,
             nickname: current.member.nickname,
-            team: slot.players.length < 2 ? ('A' as const) : ('B' as const),
+            isGuest: false,
+            team:
+              teamACount < capacity / 2 ? ('A' as const) : ('B' as const),
             joinedCycle: current.game.currentCycle,
             skillScore: calculateSkillScore(
               attendance.experienceMonths,
@@ -643,6 +660,80 @@ export function AppProvider({ children }: PropsWithChildren) {
     [runAction],
   )
 
+  const addGuestPlayer = useCallback(
+    (slotId: string, guestName: string) =>
+      runAction(
+        'game-add-guest',
+        `게스트 ${guestName.trim()}님을 추가했습니다.`,
+        () => gameApi.addGuest(slotId, guestName.trim()),
+        (current) => {
+          const slot = current.game.slots.find((item) => item.id === slotId)
+          if (!slot || slot.status !== 'open') {
+            throw new Error('모집 중인 게임에만 게스트를 추가할 수 있습니다.')
+          }
+          const name = guestName.trim()
+          if (name.length < 1 || name.length > 20) {
+            throw new Error('게스트 이름은 1자 이상 20자 이하로 입력해 주세요.')
+          }
+          const capacity = gameSlotCapacity(slot.gameType ?? 'doubles')
+          if (slot.players.length >= capacity) {
+            throw new Error('게임 인원이 이미 가득 찼습니다.')
+          }
+          const teamACount = slot.players.filter(
+            (player) => player.team === 'A',
+          ).length
+          const guest: GamePlayer = {
+            id: crypto.randomUUID(),
+            memberId: null,
+            nickname: name,
+            isGuest: true,
+            team: teamACount < capacity / 2 ? 'A' : 'B',
+            joinedCycle: current.game.currentCycle,
+            skillScore: 0,
+          }
+          return withGameEligibility(current, {
+            ...current.game,
+            slots: current.game.slots.map((item) =>
+              item.id === slotId
+                ? { ...item, players: [...item.players, guest] }
+                : item,
+            ),
+          })
+        },
+      ),
+    [runAction],
+  )
+
+  const removeGuestPlayer = useCallback(
+    (slotId: string, playerId: string) =>
+      runAction(
+        'game-remove-guest',
+        '게스트를 제외했습니다.',
+        () => gameApi.removeGuest(slotId, playerId),
+        (current) => {
+          const slot = current.game.slots.find((item) => item.id === slotId)
+          if (!slot || slot.status !== 'open') {
+            throw new Error('모집 중인 게임에서만 게스트를 제외할 수 있습니다.')
+          }
+          return withGameEligibility(current, {
+            ...current.game,
+            slots: current.game.slots.map((item) =>
+              item.id === slotId
+                ? {
+                    ...item,
+                    players: item.players.filter(
+                      (player) =>
+                        player.id !== playerId || player.memberId !== null,
+                    ),
+                  }
+                : item,
+            ),
+          })
+        },
+      ),
+    [runAction],
+  )
+
   const startGameSlot = useCallback(
     (slotId: string) =>
       runAction(
@@ -651,8 +742,13 @@ export function AppProvider({ children }: PropsWithChildren) {
         () => gameApi.startSlot(slotId),
         (current) => {
           const slot = current.game.slots.find((item) => item.id === slotId)
-          if (!slot || slot.players.length !== 4) {
-            throw new Error('4명이 모두 모여야 게임을 시작할 수 있습니다.')
+          const capacity = slot
+            ? gameSlotCapacity(slot.gameType ?? 'doubles')
+            : 4
+          if (!slot || slot.players.length !== capacity) {
+            throw new Error(
+              '팀 구성이 완성되어야 게임을 시작할 수 있습니다. (단식 1:1, 복식 2:2)',
+            )
           }
           return withGameEligibility(current, {
             ...current.game,
@@ -1128,6 +1224,8 @@ export function AppProvider({ children }: PropsWithChildren) {
       createGameSlot,
       joinGameSlot,
       leaveGameSlot,
+      addGuestPlayer,
+      removeGuestPlayer,
       startGameSlot,
       completeGameSlot,
       cancelGameSlot,
@@ -1158,6 +1256,8 @@ export function AppProvider({ children }: PropsWithChildren) {
       createGameSlot,
       joinGameSlot,
       leaveGameSlot,
+      addGuestPlayer,
+      removeGuestPlayer,
       startGameSlot,
       completeGameSlot,
       cancelGameSlot,
