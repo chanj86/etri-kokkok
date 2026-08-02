@@ -7,11 +7,15 @@ import {
 
 describe('레슨 시간 배정', () => {
   it('첫 도착이 17시 전이면 17시부터 15분 간격으로 배정한다', () => {
-    const result = calculateLessonStartTimes('2026-07-31', [
-      '2026-07-31T07:55:00.000Z',
-      '2026-07-31T08:01:00.000Z',
-      '2026-07-31T08:02:00.000Z',
-    ])
+    const result = calculateLessonStartTimes(
+      '2026-07-31',
+      [
+        { joinedAt: '2026-07-31T07:55:00.000Z' },
+        { joinedAt: '2026-07-31T08:01:00.000Z' },
+        { joinedAt: '2026-07-31T08:02:00.000Z' },
+      ],
+      new Date('2026-07-31T07:56:00.000Z'),
+    )
 
     expect(result).toEqual([
       '2026-07-31T08:00:00.000Z',
@@ -21,15 +25,62 @@ describe('레슨 시간 배정', () => {
   })
 
   it('첫 도착이 17시 이후면 실제 첫 도착부터 배정한다', () => {
-    const result = calculateLessonStartTimes('2026-07-31', [
-      '2026-07-31T08:07:00.000Z',
-      '2026-07-31T08:09:00.000Z',
-    ])
+    const result = calculateLessonStartTimes(
+      '2026-07-31',
+      [
+        { joinedAt: '2026-07-31T08:07:00.000Z' },
+        { joinedAt: '2026-07-31T08:09:00.000Z' },
+      ],
+      new Date('2026-07-31T08:07:00.000Z'),
+    )
 
     expect(result).toEqual([
       '2026-07-31T08:07:00.000Z',
       '2026-07-31T08:22:00.000Z',
     ])
+  })
+
+  it('진행 중 레슨(10분 경과)의 남은 시간을 기준으로 뒤 순서를 잇는다', () => {
+    // 예: 현재 레슨이 10분 진행돼 5분 남았고 대기자가 2명이면
+    // 내 레슨은 5 + 15 + 15 = 35분 후에 시작한다.
+    const now = new Date('2026-07-31T08:40:00.000Z')
+    const result = calculateLessonStartTimes(
+      '2026-07-31',
+      [
+        {
+          joinedAt: '2026-07-31T08:00:00.000Z',
+          estimatedStartAt: '2026-07-31T08:30:00.000Z', // 10분 경과, 진행 중
+        },
+        { joinedAt: '2026-07-31T08:10:00.000Z' },
+        { joinedAt: '2026-07-31T08:20:00.000Z' },
+        { joinedAt: '2026-07-31T08:40:00.000Z' }, // 나
+      ],
+      now,
+    )
+
+    expect(result).toEqual([
+      '2026-07-31T08:30:00.000Z', // 진행 중 유지
+      '2026-07-31T08:45:00.000Z', // 5분 후
+      '2026-07-31T09:00:00.000Z',
+      '2026-07-31T09:15:00.000Z', // 35분 후 = 내 차례
+    ])
+    expect(minutesUntil(result[3], now)).toBe(35)
+  })
+
+  it('앞사람이 빠져 시간이 당겨져도 현재 시각보다 이르게 잡지 않는다', () => {
+    const now = new Date('2026-07-31T09:00:00.000Z')
+    const result = calculateLessonStartTimes(
+      '2026-07-31',
+      [
+        {
+          joinedAt: '2026-07-31T08:50:00.000Z',
+          estimatedStartAt: '2026-07-31T09:10:00.000Z', // 아직 시작 전
+        },
+      ],
+      now,
+    )
+
+    expect(result).toEqual(['2026-07-31T09:00:00.000Z'])
   })
 
   it('빈 대기열은 빈 시간 목록을 반환한다', () => {

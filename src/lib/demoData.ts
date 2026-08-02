@@ -6,6 +6,7 @@ import type {
   GameSlot,
   LessonBooking,
   Post,
+  TeamRanking,
 } from '../types'
 import { calculateSkillScore } from './gameMatching'
 import { toSeoulDateKey } from './format'
@@ -29,7 +30,8 @@ function lessonBooking(
     nickname,
     position,
     joinedAt: isoFromNow(-45 + position),
-    estimatedStartAt: isoFromNow(7 + (position - 1) * 15),
+    // 1번은 8분 전에 레슨을 시작한 상태(7분 남음)로 둔다.
+    estimatedStartAt: isoFromNow(-8 + (position - 1) * 15),
     status: 'waiting',
     isMine,
   }
@@ -146,7 +148,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       experienceMonths: 8,
       lessonCount: 12,
       gamesPlayed: 2,
-      lastJoinedCycle: 2,
+      lastJoinedCycle: 1,
       lastGameAt: isoFromNow(-25),
       canJoin: false,
     }),
@@ -155,7 +157,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       experienceMonths: 20,
       lessonCount: 31,
       gamesPlayed: 2,
-      lastJoinedCycle: 2,
+      lastJoinedCycle: 1,
       lastGameAt: isoFromNow(-20),
       canJoin: false,
     }),
@@ -164,7 +166,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       experienceMonths: 40,
       lessonCount: 52,
       gamesPlayed: 1,
-      lastJoinedCycle: 2,
+      lastJoinedCycle: 1,
       lastGameAt: isoFromNow(-18),
       canJoin: false,
     }),
@@ -173,7 +175,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       experienceMonths: 6,
       lessonCount: 8,
       gamesPlayed: 1,
-      lastJoinedCycle: 2,
+      lastJoinedCycle: 1,
       lastGameAt: isoFromNow(-18),
       canJoin: false,
     }),
@@ -322,6 +324,53 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
     }),
   ]
 
+  const teamRankings: TeamRanking[] = [
+    {
+      memberAId: 'member-6',
+      memberANickname: '하늘',
+      memberAAvatarUrl: null,
+      memberBId: 'member-1',
+      memberBNickname: '소연',
+      memberBAvatarUrl: null,
+      games: 6,
+      wins: 5,
+      losses: 1,
+    },
+    {
+      memberAId: 'demo-me',
+      memberANickname: nickname,
+      memberAAvatarUrl: null,
+      memberBId: 'member-1',
+      memberBNickname: '소연',
+      memberBAvatarUrl: null,
+      games: 3,
+      wins: 2,
+      losses: 1,
+    },
+    {
+      memberAId: 'member-5',
+      memberANickname: '서진',
+      memberAAvatarUrl: null,
+      memberBId: 'member-3',
+      memberBNickname: '윤아',
+      memberBAvatarUrl: null,
+      games: 4,
+      wins: 2,
+      losses: 2,
+    },
+    {
+      memberAId: 'member-4',
+      memberANickname: '도윤',
+      memberAAvatarUrl: null,
+      memberBId: 'member-7',
+      memberBNickname: '준서',
+      memberBAvatarUrl: null,
+      games: 3,
+      wins: 1,
+      losses: 2,
+    },
+  ]
+
   return {
     member: {
       id: 'demo-me',
@@ -356,6 +405,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       members,
       notices,
       matching,
+      teamRankings,
     },
     records: {
       wins: 3,

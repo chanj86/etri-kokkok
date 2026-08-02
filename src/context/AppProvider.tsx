@@ -44,19 +44,33 @@ function actionError(error: unknown): string {
   return '요청을 처리하지 못했습니다.'
 }
 
+const LESSON_MS = 15 * MINUTE
+
+// 서버와 같은 규칙으로 대기열 시간을 잇는다:
+// 진행 중인 레슨은 시작 시각을 유지하고, 다음 사람은 앞사람 종료 시각부터
+// 15분씩 이어 배정한다. 시간이 당겨져도 현재 시각보다 이르게 잡지 않는다.
 function refreshLessonQueue(snapshot: AppSnapshot): AppSnapshot {
+  const now = Date.now()
   const activeQueue = snapshot.lesson.queue.filter(
     (booking) => booking.status === 'waiting',
   )
-  const firstTime = activeQueue[0]?.estimatedStartAt
-    ? new Date(activeQueue[0].estimatedStartAt).getTime()
-    : Date.now() + 10 * MINUTE
 
-  const queue = activeQueue.map((booking, index) => ({
-    ...booking,
-    position: index + 1,
-    estimatedStartAt: new Date(firstTime + index * 15 * MINUTE).toISOString(),
-  }))
+  let chainEnd = Number.NEGATIVE_INFINITY
+  const queue = activeQueue.map((booking, index) => {
+    const joined = new Date(booking.joinedAt).getTime()
+    const previous = new Date(booking.estimatedStartAt).getTime()
+    let start = Math.max(chainEnd, joined)
+    if (start < now) {
+      const inProgress = previous <= now && now < previous + LESSON_MS
+      start = inProgress ? previous : now
+    }
+    chainEnd = start + LESSON_MS
+    return {
+      ...booking,
+      position: index + 1,
+      estimatedStartAt: new Date(start).toISOString(),
+    }
+  })
   const myBooking =
     queue.find((booking) => booking.memberId === snapshot.member.id) ?? null
 
@@ -563,13 +577,12 @@ export function AppProvider({ children }: PropsWithChildren) {
             throw new Error('이미 다른 열린 게임에 참여 중입니다.')
           }
 
-          const joinedCycle = current.game.currentCycle
           const player = {
             id: crypto.randomUUID(),
             memberId: current.member.id,
             nickname: current.member.nickname,
             team: slot.players.length < 2 ? ('A' as const) : ('B' as const),
-            joinedCycle,
+            joinedCycle: current.game.currentCycle,
             skillScore: calculateSkillScore(
               attendance.experienceMonths,
               attendance.lessonCount,
@@ -580,20 +593,8 @@ export function AppProvider({ children }: PropsWithChildren) {
               ? { ...item, players: [...item.players, player] }
               : item,
           )
-          const attendees = current.game.attendees.map((item) =>
-            item.memberId === current.member.id
-              ? {
-                  ...item,
-                  lastJoinedCycle: Math.max(item.lastJoinedCycle, joinedCycle),
-                }
-              : item,
-          )
-          const game = advanceCycleIfComplete({
-            ...current.game,
-            slots,
-            attendees,
-          })
-          return withGameEligibility(current, game)
+          // 순환은 게임을 완료해야 반영되므로 참여 시점에는 바뀌지 않는다.
+          return withGameEligibility(current, { ...current.game, slots })
         },
       ),
     [runAction],
@@ -625,22 +626,8 @@ export function AppProvider({ children }: PropsWithChildren) {
                 }
               : item,
           )
-          const attendees = current.game.attendees.map((item) =>
-            item.memberId === current.member.id
-              ? {
-                  ...item,
-                  lastJoinedCycle: Math.min(
-                    item.lastJoinedCycle,
-                    current.game.currentCycle - 1,
-                  ),
-                }
-              : item,
-          )
-          return withGameEligibility(current, {
-            ...current.game,
-            slots,
-            attendees,
-          })
+          // 완료 전에는 순환 상태가 바뀐 적이 없으므로 되돌릴 것도 없다.
+          return withGameEligibility(current, { ...current.game, slots })
         },
       ),
     [runAction],
@@ -696,12 +683,17 @@ export function AppProvider({ children }: PropsWithChildren) {
           const winnerTeam = teamAScore > teamBScore ? ('A' as const) : ('B' as const)
           const now = new Date().toISOString()
           const playerIds = new Set(slot.players.map((player) => player.memberId))
+          // 게임을 끝까지 마친 시점에만 순환 credit 을 준다.
           const attendees = current.game.attendees.map((attendee) =>
             isFirstCompletion && playerIds.has(attendee.memberId)
               ? {
                   ...attendee,
                   gamesPlayed: attendee.gamesPlayed + 1,
                   lastGameAt: now,
+                  lastJoinedCycle: Math.max(
+                    attendee.lastJoinedCycle,
+                    current.game.currentCycle,
+                  ),
                 }
               : attendee,
           )
@@ -744,24 +736,26 @@ export function AppProvider({ children }: PropsWithChildren) {
               )
             : nextSummary
 
+          const nextGame = {
+            ...current.game,
+            attendees,
+            slots: current.game.slots.map((item) =>
+              item.id === slotId
+                ? {
+                    ...item,
+                    status: 'completed' as const,
+                    result: { teamAScore, teamBScore, winnerTeam },
+                  }
+                : item,
+            ),
+          }
+
           return withGameEligibility(
             {
               ...current,
               records: nextRecords,
             },
-            {
-              ...current.game,
-              attendees,
-              slots: current.game.slots.map((item) =>
-                item.id === slotId
-                  ? {
-                      ...item,
-                      status: 'completed',
-                      result: { teamAScore, teamBScore, winnerTeam },
-                    }
-                  : item,
-              ),
-            },
+            isFirstCompletion ? advanceCycleIfComplete(nextGame) : nextGame,
           )
         },
       ),
@@ -789,7 +783,6 @@ export function AppProvider({ children }: PropsWithChildren) {
             throw new Error('참여 상태가 변경되었습니다. 다시 배치해 주세요.')
           }
 
-          const joinedCycle = current.game.currentCycle
           const slot = {
             id: crypto.randomUUID(),
             courtName: arrangement.courtName,
@@ -803,21 +796,15 @@ export function AppProvider({ children }: PropsWithChildren) {
               memberId: candidate.memberId,
               nickname: candidate.nickname,
               team: candidate.team,
-              joinedCycle,
+              joinedCycle: current.game.currentCycle,
               skillScore: candidate.skillScore,
             })),
           }
-          const attendees = current.game.attendees.map((attendee) =>
-            selectedIds.has(attendee.memberId)
-              ? { ...attendee, lastJoinedCycle: joinedCycle }
-              : attendee,
-          )
-          const game = advanceCycleIfComplete({
+          // 순환은 게임 완료 시점에만 반영된다.
+          return withGameEligibility(current, {
             ...current.game,
-            attendees,
             slots: [slot, ...current.game.slots],
           })
-          return withGameEligibility(current, game)
         },
       ),
     [runAction],
@@ -837,23 +824,9 @@ export function AppProvider({ children }: PropsWithChildren) {
           ) {
             throw new Error('이미 종료되었거나 취소된 게임입니다.')
           }
-          const playerIds = new Set(
-            slot.players.map((player) => player.memberId),
-          )
-          const attendees = current.game.attendees.map((attendee) =>
-            playerIds.has(attendee.memberId)
-              ? {
-                  ...attendee,
-                  lastJoinedCycle: Math.min(
-                    attendee.lastJoinedCycle,
-                    Math.max(current.game.currentCycle - 1, 0),
-                  ),
-                }
-              : attendee,
-          )
+          // 완료 전 취소는 순환에 반영되지 않는다.
           return withGameEligibility(current, {
             ...current.game,
-            attendees,
             slots: current.game.slots.filter((item) => item.id !== slotId),
           })
         },

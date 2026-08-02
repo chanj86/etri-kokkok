@@ -66,6 +66,8 @@ declare
   ahead_slot uuid;
   reuse_slot uuid;
   current_round integer;
+  member_101_cycle integer;
+  member_101_games integer;
   blocked boolean := false;
   user_id uuid;
   notice_id uuid;
@@ -119,15 +121,6 @@ begin
     perform public.join_game_slot(first_slot);
   end loop;
 
-  select current_cycle
-  into current_round
-  from public.game_days
-  where club_id = '00000000-0000-0000-0000-000000000001'
-    and game_date = public.seoul_today();
-  if current_round <> 1 then
-    raise exception '미참여 회원이 있는데 순환이 먼저 증가했습니다.';
-  end if;
-
   -- 활성 슬롯에 참여 중이면 다른 슬롯에 들어갈 수 없다.
   perform set_config(
     'request.jwt.claim.sub',
@@ -154,13 +147,14 @@ begin
     perform public.join_game_slot(second_slot);
   end loop;
 
+  -- 참여(join)만으로는 순환이 올라가지 않는다.
   select current_cycle
   into current_round
   from public.game_days
   where club_id = '00000000-0000-0000-0000-000000000001'
     and game_date = public.seoul_today();
-  if current_round <> 2 then
-    raise exception '모든 회원 참여 후 다음 순환이 열리지 않았습니다.';
+  if current_round <> 1 then
+    raise exception '게임을 완료하지 않았는데 순환이 증가했습니다.';
   end if;
 
   perform set_config(
@@ -190,6 +184,16 @@ begin
     raise exception '게임 완료 후 참가자 전적이 반영되지 않았습니다.';
   end if;
 
+  -- 아직 게임을 완료하지 않은 회원(105, 106)이 있으므로 순환은 1에 머문다.
+  select current_cycle
+  into current_round
+  from public.game_days
+  where club_id = '00000000-0000-0000-0000-000000000001'
+    and game_date = public.seoul_today();
+  if current_round <> 1 then
+    raise exception '일부 회원만 완료했는데 순환이 증가했습니다.';
+  end if;
+
   perform public.complete_game_slot(first_slot, 16, 21);
   if (
     select count(*)
@@ -210,6 +214,7 @@ begin
     raise exception '점수 수정이 게임 횟수를 중복 증가시켰습니다.';
   end if;
 
+  -- 권고 순환: 이미 이번 순환에서 게임을 완료한 101, 102도 참여할 수 있다.
   for user_id in
     select
       ('00000000-0000-0000-0000-' || lpad(value::text, 12, '0'))::uuid
@@ -224,37 +229,20 @@ begin
     from public.game_slot_players
     where slot_id = second_slot
   ) <> 4 then
-    raise exception '순환 경계에서 4인 슬롯이 채워지지 않았습니다.';
+    raise exception '순환을 앞선 참여(권고 순환)가 허용되지 않았습니다.';
   end if;
 
   perform public.start_game_slot(second_slot);
   perform public.complete_game_slot(second_slot, 18, 21);
 
-  auto_slot := public.confirm_auto_arrangement(
-    '코트 A',
-    '[
-      {"memberId":"00000000-0000-0000-0000-000000000103","team":"A"},
-      {"memberId":"00000000-0000-0000-0000-000000000104","team":"B"},
-      {"memberId":"00000000-0000-0000-0000-000000000105","team":"A"},
-      {"memberId":"00000000-0000-0000-0000-000000000106","team":"B"}
-    ]'::jsonb
-  );
-
-  if (
-    select count(*)
-    from public.game_slot_players
-    where slot_id = auto_slot
-  ) <> 4 then
-    raise exception '자동 배치가 4명을 저장하지 못했습니다.';
-  end if;
-
+  -- 모든 활성 회원이 게임을 완료했으므로 순환이 2로 열린다.
   select current_cycle
   into current_round
   from public.game_days
   where club_id = '00000000-0000-0000-0000-000000000001'
     and game_date = public.seoul_today();
-  if current_round <> 3 then
-    raise exception '두 번째 순환 완료 후 다음 순환이 열리지 않았습니다.';
+  if current_round <> 2 then
+    raise exception '전원 게임 완료 후 다음 순환이 열리지 않았습니다.';
   end if;
 
   perform set_config(
@@ -274,12 +262,39 @@ begin
     raise exception '파트너별 게임 수와 승리 횟수가 정확하지 않습니다.';
   end if;
 
-  -- 권고 순환: 자기 차례가 아니어도 참여할 수 있다. ------------------------
   perform set_config(
     'request.jwt.claim.sub',
     '00000000-0000-0000-0000-000000000101',
     true
   );
+  auto_slot := public.confirm_auto_arrangement(
+    '코트 A',
+    '[
+      {"memberId":"00000000-0000-0000-0000-000000000103","team":"A"},
+      {"memberId":"00000000-0000-0000-0000-000000000104","team":"B"},
+      {"memberId":"00000000-0000-0000-0000-000000000105","team":"A"},
+      {"memberId":"00000000-0000-0000-0000-000000000106","team":"B"}
+    ]'::jsonb
+  );
+
+  if (
+    select count(*)
+    from public.game_slot_players
+    where slot_id = auto_slot
+  ) <> 4 then
+    raise exception '자동 배치가 4명을 저장하지 못했습니다.';
+  end if;
+
+  -- 자동 배치 생성만으로는 순환이 올라가지 않는다.
+  select current_cycle
+  into current_round
+  from public.game_days
+  where club_id = '00000000-0000-0000-0000-000000000001'
+    and game_date = public.seoul_today();
+  if current_round <> 2 then
+    raise exception '자동 배치 생성이 순환을 증가시켰습니다.';
+  end if;
+
   perform public.start_game_slot(auto_slot);
   perform public.complete_game_slot(auto_slot, 21, 15);
 
@@ -301,7 +316,17 @@ begin
   perform public.start_game_slot(third_slot);
   perform public.complete_game_slot(third_slot, 21, 10);
 
-  -- 회원 101 은 이번 순환(3)에 이미 참여했지만, 다시 참여할 수 있어야 한다.
+  -- 전원(101~106)이 순환 2에서 게임을 완료했으므로 순환이 3으로 열린다.
+  select current_cycle
+  into current_round
+  from public.game_days
+  where club_id = '00000000-0000-0000-0000-000000000001'
+    and game_date = public.seoul_today();
+  if current_round <> 3 then
+    raise exception '두 번째 순환 완료 후 다음 순환이 열리지 않았습니다.';
+  end if;
+
+  -- 게임 취소: 완료 전에는 순환·전적에 아무 영향이 없어야 한다. --------------
   ahead_slot := public.create_game_slot('코트 C');
   perform public.join_game_slot(ahead_slot);
 
@@ -314,7 +339,17 @@ begin
     raise exception '순환을 앞선 참여가 허용되지 않았습니다.';
   end if;
 
-  -- 게임 취소: 상태가 cancelled 로 바뀌고 참여자 순환이 되돌아간다. ----------
+  select last_joined_cycle, games_played
+  into member_101_cycle, member_101_games
+  from public.game_attendances
+  where member_id = '00000000-0000-0000-0000-000000000101'
+    and game_day_id = (
+      select id
+      from public.game_days
+      where club_id = '00000000-0000-0000-0000-000000000001'
+        and game_date = public.seoul_today()
+    );
+
   perform public.cancel_game_slot(ahead_slot);
 
   if (
@@ -335,8 +370,28 @@ begin
         where club_id = '00000000-0000-0000-0000-000000000001'
           and game_date = public.seoul_today()
       )
-  ) <> 2 then
-    raise exception '게임 취소 후 순환 상태가 되돌아가지 않았습니다.';
+  ) <> member_101_cycle
+    or (
+      select games_played
+      from public.game_attendances
+      where member_id = '00000000-0000-0000-0000-000000000101'
+        and game_day_id = (
+          select id
+          from public.game_days
+          where club_id = '00000000-0000-0000-0000-000000000001'
+            and game_date = public.seoul_today()
+        )
+    ) <> member_101_games then
+    raise exception '게임 취소가 순환·전적 상태를 바꾸었습니다.';
+  end if;
+
+  select current_cycle
+  into current_round
+  from public.game_days
+  where club_id = '00000000-0000-0000-0000-000000000001'
+    and game_date = public.seoul_today();
+  if current_round <> 3 then
+    raise exception '게임 취소가 순환 횟수를 바꾸었습니다.';
   end if;
 
   -- 취소된 코트는 다시 사용할 수 있다.
@@ -482,6 +537,244 @@ begin
 end;
 $$;
 
+-- 레슨 시간 재계산: 자동 완료, 진행 중 기준 연쇄 계산, 변경·리마인더 알림 ------
+do $$
+declare
+  claimed_total integer;
+  claimed_changed integer;
+  claimed_before5 integer;
+begin
+  -- (1) 예정 시간 + 15분이 지난 레슨은 자동으로 완료 처리된다.
+  update public.lesson_bookings
+  set
+    estimated_start_at = now() - interval '20 minutes',
+    joined_at = now() - interval '50 minutes'
+  where session_id = '10000000-0000-0000-0000-000000000001'
+    and member_id = '00000000-0000-0000-0000-000000000101'
+    and status = 'waiting';
+
+  perform public.resequence_lesson_queue(
+    '10000000-0000-0000-0000-000000000001'
+  );
+
+  if (
+    select status
+    from public.lesson_bookings
+    where session_id = '10000000-0000-0000-0000-000000000001'
+      and member_id = '00000000-0000-0000-0000-000000000101'
+  ) <> 'completed' then
+    raise exception '예정 시간이 지난 레슨이 자동 완료되지 않았습니다.';
+  end if;
+
+  if (
+    select position
+    from public.lesson_bookings
+    where session_id = '10000000-0000-0000-0000-000000000001'
+      and member_id = '00000000-0000-0000-0000-000000000102'
+      and status = 'waiting'
+  ) <> 1 then
+    raise exception '자동 완료 후 대기열 순번이 당겨지지 않았습니다.';
+  end if;
+
+  -- (2) 진행 중 레슨(10분 경과)이 있으면 다음 대기자는
+  --     남은 5분 뒤에 시작하는 것으로 계산된다.
+  update public.lesson_bookings
+  set
+    estimated_start_at = now() - interval '10 minutes',
+    joined_at = now() - interval '40 minutes'
+  where session_id = '10000000-0000-0000-0000-000000000001'
+    and member_id = '00000000-0000-0000-0000-000000000102'
+    and status = 'waiting';
+
+  insert into public.lesson_bookings (
+    id,
+    club_id,
+    session_id,
+    member_id,
+    joined_at,
+    position,
+    estimated_start_at
+  )
+  values (
+    '20000000-0000-0000-0000-000000000103',
+    '00000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000103',
+    now() - interval '3 minutes',
+    99,
+    now()
+  );
+
+  perform public.resequence_lesson_queue(
+    '10000000-0000-0000-0000-000000000001'
+  );
+
+  if (
+    select estimated_start_at
+    from public.lesson_bookings
+    where session_id = '10000000-0000-0000-0000-000000000001'
+      and member_id = '00000000-0000-0000-0000-000000000102'
+      and status = 'waiting'
+  ) <> now() - interval '10 minutes' then
+    raise exception '진행 중인 레슨의 시작 시각이 유지되지 않았습니다.';
+  end if;
+
+  if (
+    select estimated_start_at
+    from public.lesson_bookings
+    where id = '20000000-0000-0000-0000-000000000103'
+  ) <> now() + interval '5 minutes' then
+    raise exception
+      '진행 중 레슨의 남은 시간을 기준으로 다음 시각이 계산되지 않았습니다.';
+  end if;
+
+  -- (3) 앞사람이 빠져 시간이 당겨지면 '시간 변경' 알림이 예약된다.
+  insert into public.lesson_bookings (
+    id,
+    club_id,
+    session_id,
+    member_id,
+    joined_at,
+    position,
+    estimated_start_at
+  )
+  values (
+    '20000000-0000-0000-0000-000000000104',
+    '00000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000104',
+    now() - interval '2 minutes',
+    99,
+    now()
+  );
+
+  perform public.resequence_lesson_queue(
+    '10000000-0000-0000-0000-000000000001'
+  );
+
+  if (
+    select estimated_start_at
+    from public.lesson_bookings
+    where id = '20000000-0000-0000-0000-000000000104'
+  ) <> now() + interval '20 minutes' then
+    raise exception '뒤 대기자의 예상 시각이 연쇄 계산되지 않았습니다.';
+  end if;
+
+  -- 방금 만든 예약을 오래된 예약처럼 만들고 알림 구독을 붙인다.
+  update public.lesson_bookings
+  set created_at = now() - interval '10 minutes'
+  where id = '20000000-0000-0000-0000-000000000104';
+
+  insert into public.push_subscriptions (
+    club_id,
+    member_id,
+    endpoint,
+    p256dh,
+    auth_key
+  )
+  values (
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000104',
+    'https://push.test.invalid/endpoint-104',
+    'p256dh-value',
+    'auth-value'
+  );
+
+  -- 앞 대기자(103)가 취소하면 104의 시간이 15분 당겨진다.
+  update public.lesson_bookings
+  set status = 'cancelled'
+  where id = '20000000-0000-0000-0000-000000000103';
+
+  perform public.resequence_lesson_queue(
+    '10000000-0000-0000-0000-000000000001'
+  );
+
+  if (
+    select estimated_start_at
+    from public.lesson_bookings
+    where id = '20000000-0000-0000-0000-000000000104'
+  ) <> now() + interval '5 minutes' then
+    raise exception '취소 후 대기자의 시간이 앞으로 당겨지지 않았습니다.';
+  end if;
+
+  if not exists (
+    select 1
+    from public.notification_logs
+    where booking_id = '20000000-0000-0000-0000-000000000104'
+      and kind = 'changed'
+      and status = 'pending'
+  ) then
+    raise exception '시간 변경 알림이 예약되지 않았습니다.';
+  end if;
+
+  -- (4) 알림 클레임: 시간 변경 + 5분 전 리마인더가 함께 발급된다.
+  --     (104의 레슨은 5분 뒤 시작이므로 15분 전 시점은 이미 지났다.)
+  create temp table claimed_notifications on commit drop as
+  select * from public.claim_due_lesson_notifications(50);
+
+  select count(*) into claimed_total from claimed_notifications;
+  select count(*) into claimed_changed
+  from claimed_notifications
+  where title = '레슨 예상 시간 변경';
+  select count(*) into claimed_before5
+  from claimed_notifications
+  where title = '곧 레슨이 시작됩니다';
+
+  if claimed_total <> 2 or claimed_changed <> 1 or claimed_before5 <> 1 then
+    raise exception
+      '알림 클레임 결과가 올바르지 않습니다. (전체 %, 변경 %, 5분 전 %)',
+      claimed_total, claimed_changed, claimed_before5;
+  end if;
+
+  -- (5) 시작까지 여유가 있는 대기자는 15분 전·5분 전 리마인더가 예약만 된다.
+  insert into public.push_subscriptions (
+    club_id,
+    member_id,
+    endpoint,
+    p256dh,
+    auth_key
+  )
+  values (
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000105',
+    'https://push.test.invalid/endpoint-105',
+    'p256dh-value',
+    'auth-value'
+  );
+
+  insert into public.lesson_bookings (
+    id,
+    club_id,
+    session_id,
+    member_id,
+    joined_at,
+    position,
+    estimated_start_at
+  )
+  values (
+    '20000000-0000-0000-0000-000000000105',
+    '00000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000105',
+    now() - interval '1 minute',
+    99,
+    now()
+  );
+
+  perform public.claim_due_lesson_notifications(50);
+
+  if (
+    select count(*)
+    from public.notification_logs
+    where booking_id = '20000000-0000-0000-0000-000000000105'
+      and status = 'pending'
+      and kind in ('before15', 'before5')
+  ) <> 2 then
+    raise exception '15분 전·5분 전 리마인더가 예약되지 않았습니다.';
+  end if;
+end;
+$$;
+
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub',
@@ -513,6 +806,20 @@ begin
 
   if (snapshot -> 'community' -> 'members' -> 0) ->> 'games' is null then
     raise exception '회원별 전적 집계가 포함되지 않았습니다.';
+  end if;
+
+  -- 팀 랭킹: 101+102 조합이 3게임 2승으로 1위여야 한다.
+  if jsonb_array_length(snapshot -> 'community' -> 'teamRankings') < 1 then
+    raise exception '팀 랭킹이 스냅샷에 포함되지 않았습니다.';
+  end if;
+
+  if (
+    snapshot -> 'community' -> 'teamRankings' -> 0 ->> 'games'
+  )::integer <> 3
+    or (
+      snapshot -> 'community' -> 'teamRankings' -> 0 ->> 'wins'
+    )::integer <> 2 then
+    raise exception '팀 랭킹 집계가 정확하지 않습니다.';
   end if;
 end;
 $$;

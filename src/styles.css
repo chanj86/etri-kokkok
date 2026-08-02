@@ -2009,6 +2009,113 @@ ol {
   font-size: 10px;
 }
 
+/* ── 랭킹 ─────────────────────────────────────────────── */
+
+.ranking-hint {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.ranking-table {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.ranking-table-head,
+.ranking-table-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1.6fr) 0.5fr 0.7fr 0.6fr;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  background: var(--surface);
+  font-size: 12px;
+  text-align: left;
+}
+
+.ranking-table-head {
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ranking-table-row + .ranking-table-row {
+  border-top: 1px solid var(--bg-hover);
+}
+
+button.ranking-table-row:hover {
+  background: var(--bg-hover);
+}
+
+.ranking-table-row.mine {
+  background: var(--info-bg);
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  justify-content: center;
+  width: 34px;
+  min-height: 20px;
+  border-radius: 10px;
+  color: var(--neutral-text);
+  background: var(--neutral-bg);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.rank-badge.top-1 {
+  color: #7f5f01;
+  background: #fff0b3;
+}
+
+.rank-badge.top-2 {
+  color: #44546f;
+  background: #dcdfe4;
+}
+
+.rank-badge.top-3 {
+  color: #a54800;
+  background: #ffe2d2;
+}
+
+.ranking-member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ranking-name {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-avatar-pair {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.ranking-avatar-pair > :last-child {
+  margin-left: -8px;
+}
+
+.ranking-rate {
+  font-weight: 700;
+}
+
 /* ── 프로필 ───────────────────────────────────────────── */
 
 .profile-summary {
@@ -2333,6 +2440,17 @@ fieldset.field {
   }
 
   .partner-date {
+    display: none;
+  }
+
+  .ranking-table-head,
+  .ranking-table-row {
+    grid-template-columns: 40px minmax(0, 1.5fr) 0.6fr 0.6fr;
+    padding: 6px 8px;
+  }
+
+  .ranking-table-head span:nth-child(3),
+  .ranking-table-row > span:nth-child(3) {
     display: none;
   }
 

@@ -6,12 +6,28 @@ import {
   LogOut,
   MoveDown,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { formatShortDate, formatTime } from '../lib/format'
-import { minutesUntil } from '../lib/lessonSchedule'
+import { LESSON_DURATION_MINUTES, minutesUntil } from '../lib/lessonSchedule'
+
+const LESSON_MS = LESSON_DURATION_MINUTES * 60_000
+
+function useNow(intervalMs = 30_000): number {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), intervalMs)
+    return () => window.clearInterval(timer)
+  }, [intervalMs])
+  return now
+}
+
+function isInProgress(estimatedStartAt: string, now: number): boolean {
+  const start = new Date(estimatedStartAt).getTime()
+  return start <= now && now < start + LESSON_MS
+}
 
 export function LessonPage() {
   const {
@@ -22,13 +38,17 @@ export function LessonPage() {
     cancelLesson,
     enableNotifications,
   } = useApp()
+  const now = useNow()
   const [cancelConfirm, setCancelConfirm] = useState(false)
 
   if (!snapshot) return null
   const { lesson } = snapshot
   const waitMinutes = lesson.myBooking
-    ? minutesUntil(lesson.myBooking.estimatedStartAt)
+    ? minutesUntil(lesson.myBooking.estimatedStartAt, new Date(now))
     : null
+  const myLessonInProgress = lesson.myBooking
+    ? isInProgress(lesson.myBooking.estimatedStartAt, now)
+    : false
 
   return (
     <div className="page-stack">
@@ -59,11 +79,17 @@ export function LessonPage() {
               <strong>{lesson.myBooking.position}</strong>
             </div>
             <div className="my-lesson-info">
-              <h2>{formatTime(lesson.myBooking.estimatedStartAt)} 예상</h2>
+              <h2>
+                {myLessonInProgress
+                  ? '레슨 진행 중'
+                  : `${formatTime(lesson.myBooking.estimatedStartAt)} 예상`}
+              </h2>
               <p>
-                {waitMinutes !== null && waitMinutes > 0
-                  ? `약 ${waitMinutes}분 후 시작해요`
-                  : '곧 레슨이 시작돼요'}
+                {myLessonInProgress
+                  ? '지금 내 레슨 시간이에요'
+                  : waitMinutes !== null && waitMinutes > 0
+                    ? `약 ${waitMinutes}분 후 시작해요`
+                    : '곧 레슨이 시작돼요'}
               </p>
             </div>
           </div>
@@ -101,24 +127,30 @@ export function LessonPage() {
 
         {lesson.queue.length ? (
           <ol className="lesson-queue">
-            {lesson.queue.map((booking) => (
-              <li
-                key={booking.id}
-                className={booking.isMine ? 'mine' : undefined}
-              >
-                <span className="queue-position">{booking.position}</span>
-                <span className="queue-person">
-                  {booking.nickname}
-                  {booking.isMine && <em className="me-tag">나</em>}
-                </span>
-                <span className="queue-joined">
-                  {formatTime(booking.joinedAt)} 도착
-                </span>
-                <time className="queue-eta">
-                  {formatTime(booking.estimatedStartAt)}
-                </time>
-              </li>
-            ))}
+            {lesson.queue.map((booking) => {
+              const inProgress = isInProgress(booking.estimatedStartAt, now)
+              return (
+                <li
+                  key={booking.id}
+                  className={booking.isMine ? 'mine' : undefined}
+                >
+                  <span className="queue-position">{booking.position}</span>
+                  <span className="queue-person">
+                    {booking.nickname}
+                    {booking.isMine && <em className="me-tag">나</em>}
+                    {inProgress && <em className="lozenge info">레슨 중</em>}
+                  </span>
+                  <span className="queue-joined">
+                    {formatTime(booking.joinedAt)} 도착
+                  </span>
+                  <time className="queue-eta">
+                    {inProgress
+                      ? `${formatTime(booking.estimatedStartAt)} 시작`
+                      : formatTime(booking.estimatedStartAt)}
+                  </time>
+                </li>
+              )
+            })}
           </ol>
         ) : (
           <EmptyState
@@ -133,10 +165,10 @@ export function LessonPage() {
         <div className="notice-strip-copy">
           <BellRing size={15} />
           <div>
-            <strong>15분 전 알림</strong>
+            <strong>레슨 알림</strong>
             <p>
-              순서 변경을 반영한 최신 예상 시각 기준으로 알려드립니다. 이번 달{' '}
-              {lesson.monthlyCount}회 참석했습니다.
+              15분 전과 5분 전에 알려드리고, 예상 시각이 바뀌면 즉시
+              알려드립니다. 이번 달 {lesson.monthlyCount}회 참석했습니다.
             </p>
           </div>
         </div>

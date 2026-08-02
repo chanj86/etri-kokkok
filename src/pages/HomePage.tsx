@@ -24,6 +24,7 @@ export function HomePage() {
   const waitMinutes = lesson.myBooking
     ? minutesUntil(lesson.myBooking.estimatedStartAt)
     : null
+  const lessonInProgress = waitMinutes !== null && waitMinutes <= 0
   const activeSlots = game.slots.filter(
     (slot) => slot.status === 'open' || slot.status === 'playing',
   ).length
@@ -65,7 +66,9 @@ export function HomePage() {
             <strong>{lessonDone ? '레슨 참석 완료' : '레슨 참석'}</strong>
             <small>
               {lessonDone && lesson.myBooking
-                ? `${lesson.myBooking.position}번째 · ${formatTime(lesson.myBooking.estimatedStartAt)} 예상`
+                ? lessonInProgress
+                  ? '지금 내 레슨 시간이에요'
+                  : `${lesson.myBooking.position}번째 · ${formatTime(lesson.myBooking.estimatedStartAt)} 예상`
                 : lesson.canJoin
                   ? '도착 순서대로 배정됩니다'
                   : '17시 이후 참석 가능'}
@@ -154,9 +157,11 @@ export function HomePage() {
                   예상 {formatTime(lesson.myBooking.estimatedStartAt)}
                 </span>
                 <small>
-                  {waitMinutes !== null && waitMinutes > 0
-                    ? `약 ${waitMinutes}분 후 시작`
-                    : '곧 시작합니다'}
+                  {lessonInProgress
+                    ? '레슨 진행 중'
+                    : waitMinutes !== null && waitMinutes > 0
+                      ? `약 ${waitMinutes}분 후 시작`
+                      : '곧 시작합니다'}
                 </small>
               </div>
             </div>

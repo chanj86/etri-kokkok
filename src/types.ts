@@ -155,10 +155,23 @@ export interface CommunityMember {
   losses: number
 }
 
+export interface TeamRanking {
+  memberAId: string
+  memberANickname: string
+  memberAAvatarUrl: string | null
+  memberBId: string
+  memberBNickname: string
+  memberBAvatarUrl: string | null
+  games: number
+  wins: number
+  losses: number
+}
+
 export interface CommunitySnapshot {
   members: CommunityMember[]
   notices: Post[]
   matching: Post[]
+  teamRankings: TeamRanking[]
 }
 
 export interface AppSnapshot {

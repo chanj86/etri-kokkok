@@ -67,7 +67,12 @@ export async function fetchSnapshot(): Promise<AppSnapshot> {
   return {
     ...snapshot,
     // 데이터베이스 마이그레이션이 아직 적용되지 않은 순간에도 화면이 동작하도록 기본값을 채운다.
-    community: snapshot.community ?? { members: [], notices: [], matching: [] },
+    community: {
+      members: snapshot.community?.members ?? [],
+      notices: snapshot.community?.notices ?? [],
+      matching: snapshot.community?.matching ?? [],
+      teamRankings: snapshot.community?.teamRankings ?? [],
+    },
     records: {
       ...snapshot.records,
       partnerStats: (partnerResult.data ?? []) as PartnerRecord[],
@@ -214,8 +219,59 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return output
 }
 
+function isIosDevice(): boolean {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
+}
+
+function isStandaloneApp(): boolean {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    ('standalone' in navigator &&
+      (navigator as { standalone?: boolean }).standalone === true)
+  )
+}
+
+async function getPushRegistration(): Promise<ServiceWorkerRegistration> {
+  const existing = await navigator.serviceWorker.getRegistration()
+
+  if (!existing) {
+    if (!import.meta.env.PROD) {
+      throw new Error(
+        '알림은 배포된 앱에서만 켤 수 있습니다. (개발 모드에서는 서비스 워커가 없습니다.)',
+      )
+    }
+    await navigator.serviceWorker.register('/sw.js')
+  }
+
+  // 서비스 워커 활성화를 기다리되, 문제가 있으면 8초 후 명확한 오류를 준다.
+  const ready = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), 8000)
+    }),
+  ])
+  if (!ready) {
+    throw new Error(
+      '알림 준비에 실패했습니다. 앱을 완전히 닫았다가 다시 열어 주세요.',
+    )
+  }
+  return ready
+}
+
 export async function enablePushNotifications(): Promise<void> {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+  if (!('serviceWorker' in navigator)) {
+    throw new Error('이 브라우저는 푸시 알림을 지원하지 않습니다.')
+  }
+
+  if (!('PushManager' in window) || !('Notification' in window)) {
+    if (isIosDevice() && !isStandaloneApp()) {
+      throw new Error(
+        'iPhone/iPad에서는 공유 → "홈 화면에 추가"로 설치한 앱에서만 알림을 켤 수 있습니다.',
+      )
+    }
     throw new Error('이 브라우저는 푸시 알림을 지원하지 않습니다.')
   }
 
@@ -224,18 +280,32 @@ export async function enablePushNotifications(): Promise<void> {
     throw new Error('푸시 알림 서버 키가 설정되지 않았습니다.')
   }
 
+  if (Notification.permission === 'denied') {
+    throw new Error(
+      '알림이 차단되어 있습니다. 브라우저(또는 기기) 설정에서 이 앱의 알림 차단을 해제한 뒤 다시 시도해 주세요.',
+    )
+  }
+
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') {
     throw new Error('알림 권한이 허용되지 않았습니다.')
   }
 
-  const registration = await navigator.serviceWorker.ready
-  const subscription =
-    (await registration.pushManager.getSubscription()) ??
-    (await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    }))
+  const registration = await getPushRegistration()
+
+  let subscription = await registration.pushManager.getSubscription()
+  if (!subscription) {
+    try {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      })
+    } catch {
+      throw new Error(
+        '푸시 구독에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
+      )
+    }
+  }
 
   await runAction('save_push_subscription', {
     p_subscription: subscription.toJSON(),
