@@ -1,5 +1,8 @@
 import {
+  CalendarDays,
   ChevronRight,
+  Clock3,
+  MapPin,
   Megaphone,
   PenSquare,
   Trash2,
@@ -12,8 +15,17 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MemberDetailModal } from '../components/MemberDetailModal'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
-import { formatExperience, formatShortDate } from '../lib/format'
-import type { CommunityMember, Post, PostCategory } from '../types'
+import {
+  formatExperience,
+  formatShortDate,
+  toSeoulDateKey,
+} from '../lib/format'
+import type {
+  CommunityMember,
+  MatchingPostInput,
+  Post,
+  PostCategory,
+} from '../types'
 
 type CommunityTab = 'members' | 'notice' | 'matching'
 
@@ -25,18 +37,39 @@ function PostComposer({
 }: {
   category: PostCategory
   busy: boolean
-  onSubmit: (title: string, content: string) => Promise<void>
+  onSubmit: (
+    title: string,
+    content: string,
+    details?: MatchingPostInput,
+  ) => Promise<void>
   onClose: () => void
 }) {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [eventDate, setEventDate] = useState(() => toSeoulDateKey())
+  const [eventTime, setEventTime] = useState('19:00')
+  const [location, setLocation] = useState('')
+  const [capacity, setCapacity] = useState(4)
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (!title.trim() || !content.trim()) return
-    await onSubmit(title.trim(), content.trim())
+    if (category === 'matching' && !location.trim()) return
+    await onSubmit(
+      title.trim(),
+      content.trim(),
+      category === 'matching'
+        ? {
+            eventDate,
+            eventTime,
+            location: location.trim(),
+            capacity,
+          }
+        : undefined,
+    )
     setTitle('')
     setContent('')
+    setLocation('')
     onClose()
   }
 
@@ -62,6 +95,54 @@ function PostComposer({
         value={title}
         onChange={(event) => setTitle(event.target.value)}
       />
+      {category === 'matching' && (
+        <div className="post-composer-grid">
+          <label className="composer-field">
+            <span>날짜</span>
+            <input
+              required
+              type="date"
+              value={eventDate}
+              onChange={(event) => setEventDate(event.target.value)}
+            />
+          </label>
+          <label className="composer-field">
+            <span>시간</span>
+            <input
+              required
+              type="time"
+              value={eventTime}
+              onChange={(event) => setEventTime(event.target.value)}
+            />
+          </label>
+          <label className="composer-field">
+            <span>모집 인원</span>
+            <input
+              required
+              type="number"
+              min={1}
+              max={99}
+              inputMode="numeric"
+              value={capacity}
+              onChange={(event) =>
+                setCapacity(
+                  Math.max(1, Math.min(99, Number(event.target.value) || 1)),
+                )
+              }
+            />
+          </label>
+          <label className="composer-field wide">
+            <span>장소</span>
+            <input
+              required
+              maxLength={80}
+              placeholder="예: 유성구민체육관"
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+            />
+          </label>
+        </div>
+      )}
       <textarea
         required
         maxLength={2000}
@@ -69,7 +150,7 @@ function PostComposer({
         placeholder={
           category === 'notice'
             ? '회원들에게 알릴 내용을 입력하세요.'
-            : '외부 게임 일정, 모집 인원, 연락 방법 등을 입력하세요.'
+            : '게임 방식, 실력대, 연락 방법 등을 입력하세요.'
         }
         value={content}
         onChange={(event) => setContent(event.target.value)}
@@ -83,6 +164,47 @@ function PostComposer({
   )
 }
 
+function MatchingSideRail({
+  post,
+  busy,
+  onJoin,
+  onLeave,
+}: {
+  post: Post
+  busy: boolean
+  onJoin: (post: Post) => void
+  onLeave: (post: Post) => void
+}) {
+  const joinedCount = post.participants.length
+  const isFull = post.capacity !== null && joinedCount >= post.capacity
+  const remaining =
+    post.capacity !== null ? Math.max(0, post.capacity - joinedCount) : null
+
+  return (
+    <div className="post-item-side">
+      <span className={`post-capacity${isFull ? ' full' : ''}`}>
+        <strong>{joinedCount}</strong>
+        {post.capacity !== null ? `/${post.capacity}` : '명'}
+      </span>
+      <span className="post-capacity-label">
+        {post.capacity === null
+          ? '참석 인원'
+          : isFull
+            ? '모집 마감'
+            : `${remaining}자리 남음`}
+      </span>
+      <button
+        className={`button ${post.myJoined ? 'danger-soft' : 'primary'} post-join-button`}
+        type="button"
+        disabled={busy || (!post.myJoined && isFull)}
+        onClick={() => (post.myJoined ? onLeave(post) : onJoin(post))}
+      >
+        {post.myJoined ? '참석 취소' : isFull ? '마감' : '참석'}
+      </button>
+    </div>
+  )
+}
+
 function PostList({
   posts,
   emptyTitle,
@@ -90,6 +212,9 @@ function PostList({
   canDelete,
   busy,
   onDelete,
+  currentMemberId,
+  onJoin,
+  onLeave,
 }: {
   posts: Post[]
   emptyTitle: string
@@ -97,6 +222,9 @@ function PostList({
   canDelete: (post: Post) => boolean
   busy: boolean
   onDelete: (post: Post) => void
+  currentMemberId?: string
+  onJoin?: (post: Post) => void
+  onLeave?: (post: Post) => void
 }) {
   if (!posts.length) {
     return (
@@ -110,43 +238,98 @@ function PostList({
 
   return (
     <div className="post-list">
-      {posts.map((post) => (
-        <article className="post-item" key={post.id}>
-          <div className="post-item-head">
-            <strong>{post.title}</strong>
-            {canDelete(post) && (
-              <button
-                className="icon-button small danger"
-                type="button"
-                aria-label="글 삭제"
-                disabled={busy}
-                onClick={() => onDelete(post)}
-              >
-                <Trash2 size={13} />
-              </button>
+      {posts.map((post) => {
+        const isMatching = post.category === 'matching' && onJoin && onLeave
+        return (
+          <article
+            className={`post-item${isMatching ? ' with-side' : ''}`}
+            key={post.id}
+          >
+            <div className="post-item-main">
+              <div className="post-item-head">
+                <strong>{post.title}</strong>
+                {canDelete(post) && (
+                  <button
+                    className="icon-button small danger"
+                    type="button"
+                    aria-label="글 삭제"
+                    disabled={busy}
+                    onClick={() => onDelete(post)}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+              {isMatching && post.eventDate && (
+                <div className="post-event-chips">
+                  <span>
+                    <CalendarDays size={12} />
+                    {formatShortDate(`${post.eventDate}T12:00:00+09:00`)}
+                  </span>
+                  {post.eventTime && (
+                    <span>
+                      <Clock3 size={12} />
+                      {post.eventTime}
+                    </span>
+                  )}
+                  {post.location && (
+                    <span>
+                      <MapPin size={12} />
+                      {post.location}
+                    </span>
+                  )}
+                </div>
+              )}
+              <p className="post-item-content">{post.content}</p>
+              {isMatching && post.participants.length > 0 && (
+                <div className="post-participants">
+                  <span className="post-participants-label">참석</span>
+                  {post.participants.map((participant) => (
+                    <span
+                      className={`post-participant${
+                        participant.memberId === currentMemberId ? ' me' : ''
+                      }`}
+                      key={participant.memberId}
+                    >
+                      {participant.nickname}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="post-item-meta">
+                <Avatar
+                  name={post.authorNickname}
+                  url={post.authorAvatarUrl}
+                  size={18}
+                />
+                <span>{post.authorNickname}</span>
+                <span className="post-item-date">
+                  {formatShortDate(post.createdAt)}
+                </span>
+              </div>
+            </div>
+            {isMatching && (
+              <MatchingSideRail
+                post={post}
+                busy={busy}
+                onJoin={onJoin}
+                onLeave={onLeave}
+              />
             )}
-          </div>
-          <p className="post-item-content">{post.content}</p>
-          <div className="post-item-meta">
-            <Avatar
-              name={post.authorNickname}
-              url={post.authorAvatarUrl}
-              size={18}
-            />
-            <span>{post.authorNickname}</span>
-            <span className="post-item-date">
-              {formatShortDate(post.createdAt)}
-            </span>
-          </div>
-        </article>
-      ))}
+          </article>
+        )
+      })}
     </div>
   )
 }
 
 export function CommunityPage() {
-  const { snapshot, busyAction, createPost, deletePost } = useApp()
-  const [tab, setTab] = useState<CommunityTab>('members')
+  const { snapshot, busyAction, createPost, deletePost, joinPost, leavePost } =
+    useApp()
+  const [tab, setTab] = useState<CommunityTab>(() => {
+    const param = new URLSearchParams(window.location.search).get('tab')
+    return param === 'notice' || param === 'matching' ? param : 'members'
+  })
   const [composing, setComposing] = useState(false)
   const [detailMember, setDetailMember] = useState<CommunityMember | null>(
     null,
@@ -209,7 +392,9 @@ export function CommunityPage() {
         <PostComposer
           category={tab}
           busy={busy}
-          onSubmit={(title, content) => createPost(tab, title, content)}
+          onSubmit={(title, content, details) =>
+            createPost(tab, title, content, details)
+          }
           onClose={() => setComposing(false)}
         />
       )}
@@ -281,6 +466,9 @@ export function CommunityPage() {
           canDelete={canDelete}
           busy={busy}
           onDelete={setDeleteTarget}
+          currentMemberId={member.id}
+          onJoin={(post) => void joinPost(post.id)}
+          onLeave={(post) => void leavePost(post.id)}
         />
       )}
 

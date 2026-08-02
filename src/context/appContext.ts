@@ -3,6 +3,7 @@ import type {
   AppSnapshot,
   AuthInput,
   AutoArrangement,
+  MatchingPostInput,
   PostCategory,
   ProfileInput,
 } from '../types'
@@ -43,8 +44,11 @@ export interface AppContextValue {
     category: PostCategory,
     title: string,
     content: string,
+    details?: MatchingPostInput,
   ) => Promise<void>
   deletePost: (postId: string) => Promise<void>
+  joinPost: (postId: string) => Promise<void>
+  leavePost: (postId: string) => Promise<void>
   uploadAvatar: (file: File) => Promise<void>
   saveProfile: (input: ProfileInput) => Promise<void>
   enableNotifications: () => Promise<void>

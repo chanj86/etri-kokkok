@@ -25,6 +25,7 @@ import type {
   AutoArrangement,
   GamePlayer,
   GameSnapshot,
+  MatchingPostInput,
   Post,
   PostCategory,
   ProfileInput,
@@ -835,14 +836,22 @@ export function AppProvider({ children }: PropsWithChildren) {
   )
 
   const createPost = useCallback(
-    (category: PostCategory, title: string, content: string) =>
+    (
+      category: PostCategory,
+      title: string,
+      content: string,
+      details?: MatchingPostInput,
+    ) =>
       runAction(
         'community-create-post',
         category === 'notice' ? '공지를 등록했습니다.' : '글을 등록했습니다.',
-        () => communityApi.createPost(category, title, content),
+        () => communityApi.createPost(category, title, content, details),
         (current) => {
           if (category === 'notice' && current.member.role !== 'owner') {
             throw new Error('공지사항은 관리자만 작성할 수 있습니다.')
+          }
+          if (category === 'matching' && !details) {
+            throw new Error('날짜, 시간, 장소, 모집 인원을 입력해 주세요.')
           }
           const post: Post = {
             id: crypto.randomUUID(),
@@ -853,6 +862,12 @@ export function AppProvider({ children }: PropsWithChildren) {
             authorNickname: current.member.nickname,
             authorAvatarUrl: current.member.avatarUrl,
             createdAt: new Date().toISOString(),
+            eventDate: details?.eventDate ?? null,
+            eventTime: details?.eventTime ?? null,
+            location: details?.location ?? null,
+            capacity: details?.capacity ?? null,
+            participants: [],
+            myJoined: false,
           }
           return {
             ...current,
@@ -888,6 +903,79 @@ export function AppProvider({ children }: PropsWithChildren) {
             ),
             matching: current.community.matching.filter(
               (post) => post.id !== postId,
+            ),
+          },
+        }),
+      ),
+    [runAction],
+  )
+
+  const joinPost = useCallback(
+    (postId: string) =>
+      runAction(
+        'community-join-post',
+        '매칭에 참석했습니다.',
+        () => communityApi.joinPost(postId),
+        (current) => {
+          const target = current.community.matching.find(
+            (post) => post.id === postId,
+          )
+          if (!target) throw new Error('참석할 글을 찾을 수 없습니다.')
+          if (target.myJoined) throw new Error('이미 참석한 글입니다.')
+          if (
+            target.capacity !== null &&
+            target.participants.length >= target.capacity
+          ) {
+            throw new Error('모집 인원이 가득 찼습니다.')
+          }
+          return {
+            ...current,
+            community: {
+              ...current.community,
+              matching: current.community.matching.map((post) =>
+                post.id === postId
+                  ? {
+                      ...post,
+                      myJoined: true,
+                      participants: [
+                        ...post.participants,
+                        {
+                          memberId: current.member.id,
+                          nickname: current.member.nickname,
+                          avatarUrl: current.member.avatarUrl,
+                        },
+                      ],
+                    }
+                  : post,
+              ),
+            },
+          }
+        },
+      ),
+    [runAction],
+  )
+
+  const leavePost = useCallback(
+    (postId: string) =>
+      runAction(
+        'community-leave-post',
+        '매칭 참석을 취소했습니다.',
+        () => communityApi.leavePost(postId),
+        (current) => ({
+          ...current,
+          community: {
+            ...current.community,
+            matching: current.community.matching.map((post) =>
+              post.id === postId
+                ? {
+                    ...post,
+                    myJoined: false,
+                    participants: post.participants.filter(
+                      (participant) =>
+                        participant.memberId !== current.member.id,
+                    ),
+                  }
+                : post,
             ),
           },
         }),
@@ -1037,6 +1125,8 @@ export function AppProvider({ children }: PropsWithChildren) {
       confirmAutoArrangement,
       createPost,
       deletePost,
+      joinPost,
+      leavePost,
       uploadAvatar,
       saveProfile,
       enableNotifications,
@@ -1065,6 +1155,8 @@ export function AppProvider({ children }: PropsWithChildren) {
       confirmAutoArrangement,
       createPost,
       deletePost,
+      joinPost,
+      leavePost,
       uploadAvatar,
       saveProfile,
       enableNotifications,

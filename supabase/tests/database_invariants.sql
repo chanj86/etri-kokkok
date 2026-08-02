@@ -420,10 +420,96 @@ begin
     raise exception '일반 회원의 공지 작성이 차단되지 않았습니다.';
   end if;
 
+  -- 매칭 글은 날짜·시간·장소·모집 인원이 필수다.
+  blocked := false;
+  begin
+    perform public.create_post('matching', '필드 없는 매칭', '검증용');
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '매칭 글 필수 항목 검증이 동작하지 않았습니다.';
+  end if;
+
   matching_id := public.create_post(
     'matching',
     '토요일 외부 게스트 게임',
-    '2명 모집합니다.'
+    '게스트 2명 모집합니다.',
+    public.seoul_today() + 7,
+    time '19:30',
+    '유성구민체육관',
+    2
+  );
+
+  -- 참석: 103 참석, 중복 참석은 차단된다.
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000103',
+    true
+  );
+  perform public.join_post(matching_id);
+
+  blocked := false;
+  begin
+    perform public.join_post(matching_id);
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '중복 참석이 차단되지 않았습니다.';
+  end if;
+
+  -- 104 참석으로 정원(2명)이 차면 105는 참석할 수 없다.
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000104',
+    true
+  );
+  perform public.join_post(matching_id);
+
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000105',
+    true
+  );
+  blocked := false;
+  begin
+    perform public.join_post(matching_id);
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '정원 초과 참석이 차단되지 않았습니다.';
+  end if;
+
+  -- 103이 참석을 취소하면 105가 참석할 수 있다.
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000103',
+    true
+  );
+  perform public.leave_post(matching_id);
+
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000105',
+    true
+  );
+  perform public.join_post(matching_id);
+
+  if (
+    select count(*)
+    from public.post_participants
+    where post_id = matching_id
+  ) <> 2 then
+    raise exception '매칭 참석 인원 집계가 정확하지 않습니다.';
+  end if;
+
+  -- 글을 삭제하면 참석 기록도 함께 정리된다.
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000102',
+    true
   );
   perform public.delete_post(matching_id);
 
@@ -431,9 +517,29 @@ begin
     raise exception '본인 글 삭제가 동작하지 않았습니다.';
   end if;
 
+  if exists (
+    select 1
+    from public.post_participants
+    where post_id = matching_id
+  ) then
+    raise exception '글 삭제 시 참석 기록이 정리되지 않았습니다.';
+  end if;
+
   if not exists (select 1 from public.posts where id = notice_id) then
     raise exception '공지 글이 저장되지 않았습니다.';
   end if;
+
+  -- 스냅샷 검증용 매칭 글 (102 작성, 본인 참석 1/4)
+  matching_id := public.create_post(
+    'matching',
+    '일요일 교류전',
+    '복식 2팀 모집합니다.',
+    public.seoul_today() + 8,
+    time '10:00',
+    '반석체육관',
+    4
+  );
+  perform public.join_post(matching_id);
 
   -- 프로필 사진 주소 검증 ---------------------------------------------------
   perform public.update_my_avatar('https://example.invalid/avatar.jpg');
@@ -806,6 +912,20 @@ begin
 
   if (snapshot -> 'community' -> 'members' -> 0) ->> 'games' is null then
     raise exception '회원별 전적 집계가 포함되지 않았습니다.';
+  end if;
+
+  -- 매칭 글: 일정·정원·참석자 정보가 스냅샷에 포함돼야 한다.
+  if (
+    snapshot -> 'community' -> 'matching' -> 0 ->> 'capacity'
+  )::integer <> 4
+    or jsonb_array_length(
+      snapshot -> 'community' -> 'matching' -> 0 -> 'participants'
+    ) <> 1
+    or (snapshot -> 'community' -> 'matching' -> 0 ->> 'myJoined')::boolean
+    or (snapshot -> 'community' -> 'matching' -> 0 ->> 'eventTime') <> '10:00'
+    or (snapshot -> 'community' -> 'matching' -> 0 ->> 'location')
+      <> '반석체육관' then
+    raise exception '매칭 글 일정·참석 정보가 스냅샷에 포함되지 않았습니다.';
   end if;
 
   -- 팀 랭킹: 101+102 조합이 3게임 2승으로 1위여야 한다.

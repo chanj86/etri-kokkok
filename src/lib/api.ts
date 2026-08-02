@@ -2,6 +2,7 @@ import type {
   AppSnapshot,
   AuthInput,
   AutoArrangement,
+  MatchingPostInput,
   PartnerRecord,
   PostCategory,
   ProfileInput,
@@ -135,14 +136,30 @@ export const gameApi = {
 }
 
 export const communityApi = {
-  createPost: (category: PostCategory, title: string, content: string) =>
+  createPost: (
+    category: PostCategory,
+    title: string,
+    content: string,
+    details?: MatchingPostInput,
+  ) =>
     runAction('create_post', {
       p_category: category,
       p_title: title,
       p_content: content,
+      ...(details
+        ? {
+            p_event_date: details.eventDate,
+            p_event_time: details.eventTime,
+            p_location: details.location,
+            p_capacity: details.capacity,
+          }
+        : {}),
     }),
   deletePost: (postId: string) =>
     runAction('delete_post', { p_post_id: postId }),
+  joinPost: (postId: string) => runAction('join_post', { p_post_id: postId }),
+  leavePost: (postId: string) =>
+    runAction('leave_post', { p_post_id: postId }),
 }
 
 export async function updateProfile(input: ProfileInput): Promise<void> {
@@ -323,6 +340,7 @@ export function subscribeToClubChanges(onChange: () => void): () => void {
     'game_slot_players',
     'game_results',
     'posts',
+    'post_participants',
     'members',
   ]
 

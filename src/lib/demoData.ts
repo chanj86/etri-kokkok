@@ -228,6 +228,19 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
     result: null,
   }
 
+  const emptyEventFields = {
+    eventDate: null,
+    eventTime: null,
+    location: null,
+    capacity: null,
+    participants: [],
+    myJoined: false,
+  }
+
+  const matchingDate = new Date(Date.now() + 5 * 24 * 60 * MINUTE)
+    .toISOString()
+    .slice(0, 10)
+
   const notices: Post[] = [
     {
       id: 'notice-1',
@@ -239,6 +252,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       authorNickname: '소연',
       authorAvatarUrl: null,
       createdAt: isoFromNow(-60 * 5),
+      ...emptyEventFields,
     },
     {
       id: 'notice-2',
@@ -249,6 +263,7 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       authorNickname: '소연',
       authorAvatarUrl: null,
       createdAt: isoFromNow(-60 * 24 * 2),
+      ...emptyEventFields,
     },
   ]
 
@@ -257,11 +272,39 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       id: 'matching-1',
       category: 'matching',
       title: '일요일 유성구 클럽과 교류전',
-      content: '복식 2팀 모집합니다. 참여 원하시는 분 댓글 대신 연락 주세요.',
+      content: '복식 2팀 모집합니다. 셔틀콕과 간식은 준비되어 있어요.',
       authorId: 'member-5',
       authorNickname: '서진',
       authorAvatarUrl: null,
       createdAt: isoFromNow(-60 * 8),
+      eventDate: matchingDate,
+      eventTime: '10:00',
+      location: '유성구민체육관',
+      capacity: 4,
+      participants: [
+        { memberId: 'member-5', nickname: '서진', avatarUrl: null },
+        { memberId: 'member-1', nickname: '소연', avatarUrl: null },
+        { memberId: 'member-6', nickname: '하늘', avatarUrl: null },
+      ],
+      myJoined: false,
+    },
+    {
+      id: 'matching-2',
+      category: 'matching',
+      title: '수요일 저녁 게스트 1명',
+      content: '중급 이상이면 좋아요. 라켓만 들고 오세요.',
+      authorId: 'member-2',
+      authorNickname: '현우',
+      authorAvatarUrl: null,
+      createdAt: isoFromNow(-60 * 26),
+      eventDate: matchingDate,
+      eventTime: '19:30',
+      location: '반석체육관',
+      capacity: 1,
+      participants: [
+        { memberId: 'member-3', nickname: '윤아', avatarUrl: null },
+      ],
+      myJoined: false,
     },
   ]
 

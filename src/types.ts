@@ -130,6 +130,12 @@ export interface RecordSummary {
 
 export type PostCategory = 'notice' | 'matching'
 
+export interface PostParticipant {
+  memberId: string
+  nickname: string
+  avatarUrl: string | null
+}
+
 export interface Post {
   id: string
   category: PostCategory
@@ -139,6 +145,21 @@ export interface Post {
   authorNickname: string
   authorAvatarUrl: string | null
   createdAt: string
+  /** 매칭 글 전용: 게임 날짜 (YYYY-MM-DD) */
+  eventDate: string | null
+  /** 매칭 글 전용: 게임 시간 (HH:MM) */
+  eventTime: string | null
+  location: string | null
+  capacity: number | null
+  participants: PostParticipant[]
+  myJoined: boolean
+}
+
+export interface MatchingPostInput {
+  eventDate: string
+  eventTime: string
+  location: string
+  capacity: number
 }
 
 export interface CommunityMember {
