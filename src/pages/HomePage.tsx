@@ -1,8 +1,7 @@
 import {
-  ArrowRight,
   CalendarCheck2,
+  Check,
   ChevronRight,
-  CircleDot,
   Clock3,
   Gamepad2,
   Megaphone,
@@ -36,6 +35,9 @@ export function HomePage() {
     ? Math.round((records.wins / records.games) * 100)
     : null
 
+  const lessonDone = Boolean(lesson.myBooking)
+  const gameDone = game.myAttendanceActive
+
   return (
     <div className="page-stack">
       <PageHeader
@@ -43,6 +45,58 @@ export function HomePage() {
         title={`${member.nickname}님, 안녕하세요`}
         description="오늘의 레슨 순서와 코트 현황을 확인하세요."
       />
+
+      <section className="quick-actions" aria-label="오늘의 참석">
+        <button
+          type="button"
+          className={`quick-action lesson${lessonDone ? ' done' : ''}`}
+          disabled={
+            (!lessonDone && !lesson.canJoin) || busyAction === 'lesson-join'
+          }
+          onClick={() => {
+            if (lessonDone) navigate('/lesson')
+            else void joinLesson()
+          }}
+        >
+          <span className="quick-action-icon">
+            {lessonDone ? <Check size={20} /> : <CalendarCheck2 size={20} />}
+          </span>
+          <span className="quick-action-text">
+            <strong>{lessonDone ? '레슨 참석 완료' : '레슨 참석'}</strong>
+            <small>
+              {lessonDone && lesson.myBooking
+                ? `${lesson.myBooking.position}번째 · ${formatTime(lesson.myBooking.estimatedStartAt)} 예상`
+                : lesson.canJoin
+                  ? '도착 순서대로 배정됩니다'
+                  : '17시 이후 참석 가능'}
+            </small>
+          </span>
+          <ChevronRight size={16} className="quick-action-chevron" />
+        </button>
+
+        <button
+          type="button"
+          className={`quick-action game${gameDone ? ' done' : ''}`}
+          disabled={busyAction === 'game-attendance'}
+          onClick={() => {
+            if (gameDone) navigate('/game')
+            else void setGameAttendance(true)
+          }}
+        >
+          <span className="quick-action-icon">
+            {gameDone ? <Check size={20} /> : <Gamepad2 size={20} />}
+          </span>
+          <span className="quick-action-text">
+            <strong>{gameDone ? '게임 참석 중' : '게임 참석'}</strong>
+            <small>
+              {gameDone
+                ? `순환 ${game.currentCycle}회 · 코트 현황 보기`
+                : '오늘 게임에 참여해요'}
+            </small>
+          </span>
+          <ChevronRight size={16} className="quick-action-chevron" />
+        </button>
+      </section>
 
       <section className="panel notice-panel">
         <div className="panel-head">
@@ -107,18 +161,10 @@ export function HomePage() {
               </div>
             </div>
           ) : (
-            <div className="home-card-cta">
-              <p>17시 이후 코트에 도착했다면 참석을 눌러 주세요.</p>
-              <button
-                className="button primary"
-                type="button"
-                disabled={!lesson.canJoin || busyAction === 'lesson-join'}
-                onClick={() => void joinLesson()}
-              >
-                레슨 참석
-                <ArrowRight size={14} />
-              </button>
-            </div>
+            <p className="home-card-hint">
+              아직 참석 전입니다. 코트에 도착하면 위의 레슨 참석 버튼을 눌러
+              주세요.
+            </p>
           )}
           <p className="home-card-foot">
             이번 달 레슨 {lesson.monthlyCount}회 참석
@@ -151,16 +197,11 @@ export function HomePage() {
               <strong>{activeSlots}개</strong>
             </div>
           </div>
-
-          <button
-            className={`button ${game.myAttendanceActive ? 'subtle' : 'primary'} home-game-button`}
-            type="button"
-            disabled={busyAction === 'game-attendance'}
-            onClick={() => void setGameAttendance(!game.myAttendanceActive)}
-          >
-            <CircleDot size={14} />
-            {game.myAttendanceActive ? '게임 참석 중 · 종료하기' : '오늘 게임 참석'}
-          </button>
+          <p className="home-card-foot">
+            {gameDone
+              ? '참석 종료는 게임 탭에서 할 수 있습니다.'
+              : '위의 게임 참석 버튼으로 오늘 게임에 참여하세요.'}
+          </p>
         </section>
 
         <section className="panel home-card">

@@ -986,6 +986,114 @@ ol {
 
 /* ── 홈 ───────────────────────────────────────────────── */
 
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  text-align: left;
+  transition: filter 0.12s ease, background 0.12s ease;
+}
+
+.quick-action.lesson {
+  color: #ffffff;
+  background: var(--primary);
+}
+
+.quick-action.game {
+  color: #ffffff;
+  background: var(--orange-deep);
+}
+
+.quick-action.lesson:not(:disabled):not(.done):hover {
+  background: var(--primary-hover);
+}
+
+.quick-action.game:not(:disabled):not(.done):hover {
+  filter: brightness(0.94);
+}
+
+.quick-action-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.quick-action-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-action-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quick-action-text small {
+  display: block;
+  overflow: hidden;
+  margin-top: 1px;
+  font-size: 11px;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-action-chevron {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+.quick-action.done {
+  border-color: var(--line);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.quick-action.done:not(:disabled):hover {
+  background: var(--bg-hover);
+}
+
+.quick-action.done .quick-action-text small {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.quick-action.done .quick-action-chevron {
+  color: var(--faint);
+}
+
+.quick-action.lesson.done .quick-action-icon {
+  color: var(--info-text);
+  background: var(--info-bg);
+}
+
+.quick-action.game.done .quick-action-icon {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.home-card-hint {
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .notice-panel .panel-head {
   margin-bottom: 4px;
 }
@@ -2182,6 +2290,15 @@ fieldset.field {
     align-items: flex-start;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .quick-action {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .quick-action-chevron {
+    display: none;
   }
 
   .my-lesson-card {
