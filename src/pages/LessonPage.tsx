@@ -10,7 +10,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ShuttlecockIcon } from '../components/ShuttlecockIcon'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
-import { formatShortDate, formatTime } from '../lib/format'
+import { formatTime } from '../lib/format'
 import { LESSON_DURATION_MINUTES, minutesUntil } from '../lib/lessonSchedule'
 
 const LESSON_MS = LESSON_DURATION_MINUTES * 60_000
@@ -53,7 +53,6 @@ export function LessonPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow={formatShortDate(`${lesson.sessionDate}T12:00:00+09:00`)}
         title="레슨"
         description="도착 순서대로 1인 15분씩 배정됩니다. 17시 이후 참석할 수 있습니다."
         action={

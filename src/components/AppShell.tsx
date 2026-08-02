@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { PropsWithChildren } from 'react'
 import { useApp } from '../hooks/useApp'
+import { formatShortDate } from '../lib/format'
 import { type AppPath, usePathname } from '../lib/navigation'
 import { AppLink } from './AppLink'
 
@@ -40,6 +41,7 @@ export function AppShell({ children }: PropsWithChildren) {
             <p className="eyebrow">{snapshot.member.clubName}</p>
             <strong>안녕하세요, {snapshot.member.nickname}님</strong>
           </div>
+          <span className="topbar-date">{formatShortDate(new Date())}</span>
         </div>
         <div className="topbar-actions">
           {demoMode && <span className="demo-badge">데모</span>}

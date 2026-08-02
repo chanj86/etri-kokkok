@@ -444,6 +444,17 @@ ol {
   white-space: nowrap;
 }
 
+.topbar-date {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 10px;
+  color: var(--info-text);
+  background: var(--info-bg);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;

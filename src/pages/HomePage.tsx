@@ -13,7 +13,7 @@ import { ShuttlecockIcon } from '../components/ShuttlecockIcon'
 import { PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { navigate } from '../lib/navigation'
-import { formatFullDate, formatShortDate, formatTime } from '../lib/format'
+import { formatShortDate, formatTime } from '../lib/format'
 import { minutesUntil } from '../lib/lessonSchedule'
 
 export function HomePage() {
@@ -43,7 +43,6 @@ export function HomePage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow={formatFullDate(new Date())}
         title={`${member.nickname}님, 안녕하세요`}
         description="오늘의 레슨 순서와 코트 현황을 확인하세요."
       />
