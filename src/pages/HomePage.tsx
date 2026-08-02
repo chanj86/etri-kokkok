@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { AppLink } from '../components/AppLink'
 import { InstallCard } from '../components/InstallCard'
+import { ShuttlecockIcon } from '../components/ShuttlecockIcon'
 import { PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { navigate } from '../lib/navigation'
@@ -60,7 +61,7 @@ export function HomePage() {
           }}
         >
           <span className="quick-action-icon">
-            {lessonDone ? <Check size={20} /> : <CalendarCheck2 size={20} />}
+            {lessonDone ? <Check size={20} /> : <ShuttlecockIcon size={20} />}
           </span>
           <span className="quick-action-text">
             <strong>{lessonDone ? '레슨 참석 완료' : '레슨 참석'}</strong>
@@ -87,7 +88,7 @@ export function HomePage() {
           }}
         >
           <span className="quick-action-icon">
-            {gameDone ? <Check size={20} /> : <Gamepad2 size={20} />}
+            {gameDone ? <Check size={20} /> : <ShuttlecockIcon size={20} />}
           </span>
           <span className="quick-action-text">
             <strong>{gameDone ? '게임 참석 중' : '게임 참석'}</strong>

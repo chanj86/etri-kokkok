@@ -1,13 +1,13 @@
 import {
   BellRing,
   CalendarDays,
-  Check,
   Clock3,
   LogOut,
   MoveDown,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { ShuttlecockIcon } from '../components/ShuttlecockIcon'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { formatShortDate, formatTime } from '../lib/format'
@@ -64,7 +64,7 @@ export function LessonPage() {
               disabled={!lesson.canJoin || busyAction === 'lesson-join'}
               onClick={() => void joinLesson()}
             >
-              <Check size={14} />
+              <ShuttlecockIcon size={14} />
               레슨 참석
             </button>
           ) : undefined

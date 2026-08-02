@@ -18,6 +18,7 @@ import { Avatar } from '../components/Avatar'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CourtMap } from '../components/CourtMap'
 import { MemberDetailModal } from '../components/MemberDetailModal'
+import { ShuttlecockIcon } from '../components/ShuttlecockIcon'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { formatExperience, formatWaitTime } from '../lib/format'
@@ -436,7 +437,11 @@ export function GamePage() {
             disabled={busyAction === 'game-attendance'}
             onClick={() => void setGameAttendance(!game.myAttendanceActive)}
           >
-            <CircleDot size={14} />
+            {game.myAttendanceActive ? (
+              <CircleDot size={14} />
+            ) : (
+              <ShuttlecockIcon size={14} />
+            )}
             {game.myAttendanceActive ? '참석 종료' : '게임 참석'}
           </button>
         }
