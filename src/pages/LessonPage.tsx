@@ -59,7 +59,7 @@ export function LessonPage() {
         action={
           !lesson.myBooking ? (
             <button
-              className="button primary"
+              className={`button primary${lesson.canJoin ? ' attention' : ''}`}
               type="button"
               disabled={!lesson.canJoin || busyAction === 'lesson-join'}
               onClick={() => void joinLesson()}

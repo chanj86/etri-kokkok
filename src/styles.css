@@ -199,6 +199,55 @@ ol {
   background: var(--danger-bg);
 }
 
+.button.accent {
+  color: #ffffff;
+  background: var(--orange-deep);
+}
+
+.button.accent:not(:disabled):hover {
+  background: var(--orange);
+}
+
+.button.danger-soft {
+  border-color: rgba(174, 46, 36, 0.25);
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.button.danger-soft:not(:disabled):hover {
+  background: #ffdad6;
+}
+
+/* 참석 유도 버튼: 색이 퍼지는 펄스로 시선을 끈다 */
+.button.attention {
+  --pulse-color: rgba(12, 102, 228, 0.42);
+  animation: attention-pulse 1.6s ease-out infinite;
+}
+
+.button.accent.attention {
+  --pulse-color: rgba(194, 81, 0, 0.42);
+}
+
+.button.attention:disabled {
+  animation: none;
+}
+
+@keyframes attention-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse-color);
+  }
+  75%,
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button.attention {
+    animation: none;
+  }
+}
+
 .icon-button {
   display: inline-grid;
   place-items: center;
@@ -458,10 +507,14 @@ ol {
 
 .page-header {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 2px 2px 0;
+}
+
+.page-header > div:first-child {
+  min-width: 0;
 }
 
 .page-header h1 {
@@ -2424,10 +2477,9 @@ fieldset.field {
 }
 
 @media (max-width: 560px) {
+  /* 참석 버튼이 항상 제목 오른쪽 상단에 보이도록 가로 배치를 유지한다 */
   .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
 
   .quick-action {

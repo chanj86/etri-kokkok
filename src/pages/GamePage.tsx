@@ -429,13 +429,15 @@ export function GamePage() {
         description={`현재 ${game.currentCycle}번째 순환 · 참석 ${activeAttendees.length}명 · 진행 슬롯 ${activeSlots.length}개`}
         action={
           <button
-            className={`button ${game.myAttendanceActive ? 'subtle' : 'primary'}`}
+            className={`button ${
+              game.myAttendanceActive ? 'danger-soft' : 'accent attention'
+            }`}
             type="button"
             disabled={busyAction === 'game-attendance'}
             onClick={() => void setGameAttendance(!game.myAttendanceActive)}
           >
             <CircleDot size={14} />
-            {game.myAttendanceActive ? '참석 종료' : '오늘 게임 참석'}
+            {game.myAttendanceActive ? '참석 종료' : '게임 참석'}
           </button>
         }
       />
