@@ -3,6 +3,7 @@ import type {
   AppSnapshot,
   AuthInput,
   AutoArrangement,
+  PostCategory,
   ProfileInput,
 } from '../types'
 
@@ -36,7 +37,15 @@ export interface AppContextValue {
     teamAScore: number,
     teamBScore: number,
   ) => Promise<void>
+  cancelGameSlot: (slotId: string) => Promise<void>
   confirmAutoArrangement: (arrangement: AutoArrangement) => Promise<void>
+  createPost: (
+    category: PostCategory,
+    title: string,
+    content: string,
+  ) => Promise<void>
+  deletePost: (postId: string) => Promise<void>
+  uploadAvatar: (file: File) => Promise<void>
   saveProfile: (input: ProfileInput) => Promise<void>
   enableNotifications: () => Promise<void>
 }

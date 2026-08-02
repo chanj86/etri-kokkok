@@ -34,29 +34,6 @@ export function StatusPill({
   return <span className={`status-pill ${tone}`}>{children}</span>
 }
 
-export function StatCard({
-  icon: Icon,
-  label,
-  value,
-  helper,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string | number
-  helper?: string
-}) {
-  return (
-    <article className="stat-card">
-      <div className="stat-icon">
-        <Icon size={20} />
-      </div>
-      <p>{label}</p>
-      <strong>{value}</strong>
-      {helper && <small>{helper}</small>}
-    </article>
-  )
-}
-
 export function EmptyState({
   icon: Icon,
   title,
@@ -71,7 +48,7 @@ export function EmptyState({
   return (
     <div className="empty-state">
       <div className="empty-icon">
-        <Icon size={26} />
+        <Icon size={18} />
       </div>
       <strong>{title}</strong>
       <p>{description}</p>

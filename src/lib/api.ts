@@ -3,6 +3,7 @@ import type {
   AuthInput,
   AutoArrangement,
   PartnerRecord,
+  PostCategory,
   ProfileInput,
   Team,
 } from '../types'
@@ -65,6 +66,8 @@ export async function fetchSnapshot(): Promise<AppSnapshot> {
   const snapshot = snapshotResult.data as AppSnapshot
   return {
     ...snapshot,
+    // 데이터베이스 마이그레이션이 아직 적용되지 않은 순간에도 화면이 동작하도록 기본값을 채운다.
+    community: snapshot.community ?? { members: [], notices: [], matching: [] },
     records: {
       ...snapshot.records,
       partnerStats: (partnerResult.data ?? []) as PartnerRecord[],
@@ -122,6 +125,19 @@ export const gameApi = {
       p_member_id: memberId,
       p_team: team,
     }),
+  cancelSlot: (slotId: string) =>
+    runAction('cancel_game_slot', { p_slot_id: slotId }),
+}
+
+export const communityApi = {
+  createPost: (category: PostCategory, title: string, content: string) =>
+    runAction('create_post', {
+      p_category: category,
+      p_title: title,
+      p_content: content,
+    }),
+  deletePost: (postId: string) =>
+    runAction('delete_post', { p_post_id: postId }),
 }
 
 export async function updateProfile(input: ProfileInput): Promise<void> {
@@ -131,6 +147,58 @@ export async function updateProfile(input: ProfileInput): Promise<void> {
     p_experience_months: input.experienceMonths,
     p_prior_lesson_count: input.priorLessonCount,
   })
+}
+
+export async function resizeImageToJpeg(
+  file: File,
+  maxSize: number,
+): Promise<Blob> {
+  const bitmap = await createImageBitmap(file)
+  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height))
+  const width = Math.max(1, Math.round(bitmap.width * scale))
+  const height = Math.max(1, Math.round(bitmap.height * scale))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('이미지를 처리할 수 없습니다.')
+  context.drawImage(bitmap, 0, 0, width, height)
+  bitmap.close()
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) =>
+        blob ? resolve(blob) : reject(new Error('이미지 변환에 실패했습니다.')),
+      'image/jpeg',
+      0.86,
+    )
+  })
+}
+
+export async function uploadAvatarPhoto(file: File): Promise<string> {
+  const client = requireSupabase()
+  const {
+    data: { user },
+    error: userError,
+  } = await client.auth.getUser()
+  if (userError || !user) throw new Error('로그인이 필요합니다.')
+
+  const blob = await resizeImageToJpeg(file, 320)
+  const path = `${user.id}/avatar.jpg`
+
+  const { error: uploadError } = await client.storage
+    .from('avatars')
+    .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+  if (uploadError) {
+    throw new Error('사진 업로드에 실패했습니다. 다시 시도해 주세요.')
+  }
+
+  const { data } = client.storage.from('avatars').getPublicUrl(path)
+  // 같은 경로에 덮어쓰므로 캐시를 피하기 위해 버전 값을 붙인다.
+  const avatarUrl = `${data.publicUrl}?v=${Date.now()}`
+  await runAction('update_my_avatar', { p_avatar_url: avatarUrl })
+  return avatarUrl
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
@@ -184,6 +252,8 @@ export function subscribeToClubChanges(onChange: () => void): () => void {
     'game_slots',
     'game_slot_players',
     'game_results',
+    'posts',
+    'members',
   ]
 
   tables.forEach((table) => {

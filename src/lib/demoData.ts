@@ -1,9 +1,11 @@
 import type {
   AppSnapshot,
+  CommunityMember,
   GameAttendance,
   GamePlayer,
   GameSlot,
   LessonBooking,
+  Post,
 } from '../types'
 import { calculateSkillScore } from './gameMatching'
 import { toSeoulDateKey } from './format'
@@ -40,12 +42,12 @@ function attendance(
 ): GameAttendance {
   const experienceMonths = options.experienceMonths ?? 18
   const lessonCount = options.lessonCount ?? 20
-  void calculateSkillScore(experienceMonths, lessonCount)
 
   return {
     id: `attendance-${memberId}`,
     memberId,
     nickname,
+    avatarUrl: null,
     gender: options.gender ?? 'unspecified',
     experienceMonths,
     lessonCount,
@@ -72,6 +74,28 @@ function player(
     team,
     joinedCycle,
     skillScore: calculateSkillScore(experienceMonths, lessonCount),
+  }
+}
+
+function communityMember(
+  memberId: string,
+  nickname: string,
+  options: Partial<CommunityMember> = {},
+): CommunityMember {
+  const games = options.games ?? 0
+  const wins = options.wins ?? 0
+  return {
+    memberId,
+    nickname,
+    avatarUrl: options.avatarUrl ?? null,
+    role: options.role ?? 'member',
+    gender: options.gender ?? 'unspecified',
+    experienceMonths: options.experienceMonths ?? 12,
+    lessonCount: options.lessonCount ?? 10,
+    joinedAt: options.joinedAt ?? isoFromNow(-60 * 24 * 90),
+    games,
+    wins,
+    losses: games - wins,
   }
 }
 
@@ -122,25 +146,46 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       experienceMonths: 8,
       lessonCount: 12,
       gamesPlayed: 2,
-      lastJoinedCycle: 1,
+      lastJoinedCycle: 2,
       lastGameAt: isoFromNow(-25),
+      canJoin: false,
     }),
     attendance('member-5', '서진', {
       gender: 'unspecified',
       experienceMonths: 20,
       lessonCount: 31,
       gamesPlayed: 2,
-      lastJoinedCycle: 1,
+      lastJoinedCycle: 2,
       lastGameAt: isoFromNow(-20),
+      canJoin: false,
+    }),
+    attendance('member-6', '하늘', {
+      gender: 'female',
+      experienceMonths: 40,
+      lessonCount: 52,
+      gamesPlayed: 1,
+      lastJoinedCycle: 2,
+      lastGameAt: isoFromNow(-18),
+      canJoin: false,
+    }),
+    attendance('member-7', '준서', {
+      gender: 'male',
+      experienceMonths: 6,
+      lessonCount: 8,
+      gamesPlayed: 1,
+      lastJoinedCycle: 2,
+      lastGameAt: isoFromNow(-18),
+      canJoin: false,
     }),
   ]
 
   const completedSlot: GameSlot = {
     id: 'slot-completed',
-    courtName: '1번 코트',
+    courtName: '코트 B',
     status: 'completed',
     source: 'manual',
     createdAt: isoFromNow(-65),
+    startedAt: isoFromNow(-60),
     players: [
       player('demo-me', nickname, 'A', 1, 24, 28),
       player('member-1', '소연', 'A', 1, 30, 45),
@@ -154,12 +199,136 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
     },
   }
 
+  const playingSlot: GameSlot = {
+    id: 'slot-playing',
+    courtName: '코트 C',
+    status: 'playing',
+    source: 'manual',
+    createdAt: isoFromNow(-25),
+    startedAt: isoFromNow(-17),
+    players: [
+      player('member-4', '도윤', 'A', 2, 8, 12),
+      player('member-5', '서진', 'A', 2, 20, 31),
+      player('member-6', '하늘', 'B', 2, 40, 52),
+      player('member-7', '준서', 'B', 2, 6, 8),
+    ],
+    result: null,
+  }
+
+  const openSlot: GameSlot = {
+    id: 'slot-open',
+    courtName: '코트 B',
+    status: 'open',
+    source: 'manual',
+    createdAt: isoFromNow(-4),
+    startedAt: null,
+    players: [],
+    result: null,
+  }
+
+  const notices: Post[] = [
+    {
+      id: 'notice-1',
+      category: 'notice',
+      title: '8월 정기 모임 안내',
+      content:
+        '이번 주 토요일 오후 5시부터 정기 모임을 진행합니다. 셔틀콕은 동호회에서 준비합니다.',
+      authorId: 'member-1',
+      authorNickname: '소연',
+      authorAvatarUrl: null,
+      createdAt: isoFromNow(-60 * 5),
+    },
+    {
+      id: 'notice-2',
+      category: 'notice',
+      title: '코트 A 레슨 시간 변경',
+      content: '이번 달부터 레슨 시작 시간이 17시로 고정됩니다.',
+      authorId: 'member-1',
+      authorNickname: '소연',
+      authorAvatarUrl: null,
+      createdAt: isoFromNow(-60 * 24 * 2),
+    },
+  ]
+
+  const matching: Post[] = [
+    {
+      id: 'matching-1',
+      category: 'matching',
+      title: '일요일 유성구 클럽과 교류전',
+      content: '복식 2팀 모집합니다. 참여 원하시는 분 댓글 대신 연락 주세요.',
+      authorId: 'member-5',
+      authorNickname: '서진',
+      authorAvatarUrl: null,
+      createdAt: isoFromNow(-60 * 8),
+    },
+  ]
+
+  const members: CommunityMember[] = [
+    communityMember('demo-me', nickname, {
+      role: 'owner',
+      gender: 'male',
+      experienceMonths: 24,
+      lessonCount: 28,
+      games: 5,
+      wins: 3,
+    }),
+    communityMember('member-1', '소연', {
+      gender: 'female',
+      experienceMonths: 30,
+      lessonCount: 45,
+      games: 8,
+      wins: 6,
+    }),
+    communityMember('member-2', '현우', {
+      gender: 'male',
+      experienceMonths: 12,
+      lessonCount: 18,
+      games: 4,
+      wins: 1,
+    }),
+    communityMember('member-3', '윤아', {
+      gender: 'female',
+      experienceMonths: 16,
+      lessonCount: 24,
+      games: 6,
+      wins: 3,
+    }),
+    communityMember('member-4', '도윤', {
+      gender: 'male',
+      experienceMonths: 8,
+      lessonCount: 12,
+      games: 3,
+      wins: 1,
+    }),
+    communityMember('member-5', '서진', {
+      experienceMonths: 20,
+      lessonCount: 31,
+      games: 7,
+      wins: 4,
+    }),
+    communityMember('member-6', '하늘', {
+      gender: 'female',
+      experienceMonths: 40,
+      lessonCount: 52,
+      games: 12,
+      wins: 9,
+    }),
+    communityMember('member-7', '준서', {
+      gender: 'male',
+      experienceMonths: 6,
+      lessonCount: 8,
+      games: 2,
+      wins: 0,
+    }),
+  ]
+
   return {
     member: {
       id: 'demo-me',
       clubId: 'demo-club',
       clubName: 'ETRI 콕콕',
       nickname,
+      avatarUrl: null,
       role: 'owner',
       gender: 'male',
       experienceMonths: 24,
@@ -181,18 +350,12 @@ export function createDemoSnapshot(nickname = '민준'): AppSnapshot {
       myAttendanceActive: true,
       myCanJoin: true,
       attendees,
-      slots: [
-        {
-          id: 'slot-open',
-          courtName: '2번 코트',
-          status: 'open',
-          source: 'manual',
-          createdAt: isoFromNow(-4),
-          players: [],
-          result: null,
-        },
-        completedSlot,
-      ],
+      slots: [openSlot, playingSlot, completedSlot],
+    },
+    community: {
+      members,
+      notices,
+      matching,
     },
     records: {
       wins: 3,

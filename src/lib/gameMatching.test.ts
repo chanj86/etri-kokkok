@@ -13,6 +13,7 @@ function attendee(
     id: `attendance-${memberId}`,
     memberId,
     nickname: memberId,
+    avatarUrl: null,
     gender: 'unspecified',
     experienceMonths: 12,
     lessonCount: 10,

@@ -5,6 +5,7 @@ import {
   Home,
   RefreshCw,
   Trophy,
+  UsersRound,
 } from 'lucide-react'
 import type { PropsWithChildren } from 'react'
 import { useApp } from '../hooks/useApp'
@@ -19,6 +20,7 @@ const navigation: Array<{
   { to: '/', label: '홈', icon: Home },
   { to: '/lesson', label: '레슨', icon: ClipboardList },
   { to: '/game', label: '게임', icon: Gamepad2 },
+  { to: '/community', label: '커뮤니티', icon: UsersRound },
   { to: '/records', label: '기록', icon: Trophy },
   { to: '/profile', label: '내 정보', icon: CircleUserRound },
 ]

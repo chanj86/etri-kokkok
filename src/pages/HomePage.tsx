@@ -1,184 +1,197 @@
 import {
   ArrowRight,
   CalendarCheck2,
+  ChevronRight,
+  CircleDot,
   Clock3,
   Gamepad2,
-  Medal,
+  Megaphone,
   Trophy,
-  UsersRound,
 } from 'lucide-react'
 import { AppLink } from '../components/AppLink'
 import { InstallCard } from '../components/InstallCard'
-import { PageHeader, StatCard, StatusPill } from '../components/ui'
+import { PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
-import { formatFullDate, formatTime } from '../lib/format'
+import { navigate } from '../lib/navigation'
+import { formatFullDate, formatShortDate, formatTime } from '../lib/format'
 import { minutesUntil } from '../lib/lessonSchedule'
 
 export function HomePage() {
-  const {
-    snapshot,
-    busyAction,
-    joinLesson,
-    setGameAttendance,
-  } = useApp()
+  const { snapshot, busyAction, joinLesson, setGameAttendance } = useApp()
 
   if (!snapshot) return null
 
-  const { lesson, game, records } = snapshot
+  const { lesson, game, records, community, member } = snapshot
   const waitMinutes = lesson.myBooking
     ? minutesUntil(lesson.myBooking.estimatedStartAt)
     : null
-  const playingSlots = game.slots.filter(
+  const activeSlots = game.slots.filter(
     (slot) => slot.status === 'open' || slot.status === 'playing',
   ).length
+  const attendeeCount = game.attendees.filter(
+    (attendee) => attendee.active,
+  ).length
+  const latestNotices = community.notices.slice(0, 2)
+  const winRate = records.games
+    ? Math.round((records.wins / records.games) * 100)
+    : null
 
   return (
     <div className="page-stack">
       <PageHeader
         eyebrow={formatFullDate(new Date())}
-        title="오늘도 즐거운 콕!"
-        description="내 순서와 코트 상황을 한눈에 확인하세요."
+        title={`${member.nickname}님, 안녕하세요`}
+        description="오늘의 레슨 순서와 코트 현황을 확인하세요."
       />
 
-      <section className="etri-welcome-banner">
-        <div className="etri-welcome-copy">
-          <img src="/etri-logo.png" alt="ETRI" />
-          <div>
-            <span className="section-kicker">ETRI 콕콕</span>
-            <h2>함께 기다리고, 함께 즐겨요</h2>
-            <p>ETRI 캐릭터와 함께 오늘의 레슨과 게임을 시작해 보세요.</p>
-          </div>
+      <section className="panel notice-panel">
+        <div className="panel-head">
+          <h2>
+            <Megaphone size={15} />
+            공지사항
+          </h2>
+          <AppLink to="/community" className="panel-link">
+            더보기
+            <ChevronRight size={13} />
+          </AppLink>
         </div>
-        <img
-          className="etri-welcome-characters"
-          src="/etri-characters.png"
-          alt="ETRI 캐릭터"
-        />
+        {latestNotices.length ? (
+          <ul className="notice-list">
+            {latestNotices.map((notice) => (
+              <li key={notice.id}>
+                <button
+                  type="button"
+                  className="notice-row"
+                  onClick={() => navigate('/community')}
+                >
+                  <strong>{notice.title}</strong>
+                  <span>{formatShortDate(notice.createdAt)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="notice-empty">등록된 공지가 없습니다.</p>
+        )}
       </section>
 
-      <section className="home-hero-grid">
-        <article className="lesson-hero">
-          <div className="card-topline">
-            <div className="icon-chip light">
-              <CalendarCheck2 size={20} />
-            </div>
-            <StatusPill tone={lesson.myBooking ? 'accent' : 'neutral'}>
-              {lesson.myBooking ? '참석 완료' : '참석 전'}
-            </StatusPill>
+      <div className="home-grid">
+        <section className="panel home-card">
+          <div className="panel-head">
+            <h2>
+              <CalendarCheck2 size={15} />
+              오늘의 레슨
+            </h2>
+            <AppLink to="/lesson" className="panel-link">
+              대기열
+              <ChevronRight size={13} />
+            </AppLink>
           </div>
 
           {lesson.myBooking ? (
-            <>
-              <div className="lesson-position">
-                <span>나의 레슨 순서</span>
+            <div className="home-lesson-status">
+              <div className="home-lesson-order">
                 <strong>{lesson.myBooking.position}</strong>
-                <em>번째</em>
+                <span>번째</span>
               </div>
-              <div className="lesson-time-row">
-                <Clock3 size={19} />
-                <div>
-                  <span>예상 시작</span>
-                  <strong>{formatTime(lesson.myBooking.estimatedStartAt)}</strong>
-                </div>
+              <div className="home-lesson-time">
+                <span>
+                  <Clock3 size={13} />
+                  예상 {formatTime(lesson.myBooking.estimatedStartAt)}
+                </span>
                 <small>
                   {waitMinutes !== null && waitMinutes > 0
-                    ? `약 ${waitMinutes}분 후`
-                    : '곧 시작'}
+                    ? `약 ${waitMinutes}분 후 시작`
+                    : '곧 시작합니다'}
                 </small>
               </div>
-              <AppLink className="card-link light-link" to="/lesson">
-                대기열 자세히 보기
-                <ArrowRight size={18} />
-              </AppLink>
-            </>
+            </div>
           ) : (
-            <div className="hero-empty">
-              <div>
-                <h2>코트에 도착하셨나요?</h2>
-                <p>17시 이후 참석하면 도착 순서대로 시간이 배정됩니다.</p>
-              </div>
+            <div className="home-card-cta">
+              <p>17시 이후 코트에 도착했다면 참석을 눌러 주세요.</p>
               <button
-                className="button lime"
+                className="button primary"
                 type="button"
                 disabled={!lesson.canJoin || busyAction === 'lesson-join'}
                 onClick={() => void joinLesson()}
               >
                 레슨 참석
-                <ArrowRight size={18} />
+                <ArrowRight size={14} />
               </button>
             </div>
           )}
-        </article>
+          <p className="home-card-foot">
+            이번 달 레슨 {lesson.monthlyCount}회 참석
+          </p>
+        </section>
 
-        <article className="game-hero">
-          <div className="game-hero-head">
-            <div>
-              <span className="section-kicker">오늘의 게임</span>
-              <h2>{game.currentCycle}번째 순환</h2>
-            </div>
-            <div className="cycle-orbit" aria-hidden="true">
-              <span>{game.currentCycle}</span>
-            </div>
-          </div>
-          <div className="game-quick-stats">
-            <div>
-              <UsersRound size={18} />
-              <span>참석 {game.attendees.filter((item) => item.active).length}명</span>
-            </div>
-            <div>
-              <Gamepad2 size={18} />
-              <span>진행 슬롯 {playingSlots}개</span>
-            </div>
-          </div>
-          <div className="game-hero-actions">
-            <button
-              className={`button ${game.myAttendanceActive ? 'ghost-dark' : 'primary'}`}
-              type="button"
-              disabled={busyAction === 'game-attendance'}
-              onClick={() => void setGameAttendance(!game.myAttendanceActive)}
-            >
-              {game.myAttendanceActive ? '참석 중' : '게임 참석'}
-            </button>
-            <AppLink className="round-link" to="/game" aria-label="게임 화면 열기">
-              <ArrowRight size={20} />
+        <section className="panel home-card">
+          <div className="panel-head">
+            <h2>
+              <Gamepad2 size={15} />
+              오늘의 게임
+            </h2>
+            <AppLink to="/game" className="panel-link">
+              코트 현황
+              <ChevronRight size={13} />
             </AppLink>
           </div>
-        </article>
-      </section>
 
-      <section>
-        <div className="section-heading">
-          <div>
-            <span className="section-kicker">이번 달 기록</span>
-            <h2>나의 활동</h2>
+          <div className="home-game-stats">
+            <div>
+              <span>순환</span>
+              <strong>{game.currentCycle}회</strong>
+            </div>
+            <div>
+              <span>참석</span>
+              <strong>{attendeeCount}명</strong>
+            </div>
+            <div>
+              <span>진행 게임</span>
+              <strong>{activeSlots}개</strong>
+            </div>
           </div>
-          <AppLink to="/records">전체 기록</AppLink>
-        </div>
-        <div className="stats-grid">
-          <StatCard
-            icon={CalendarCheck2}
-            label="레슨 참석"
-            value={`${records.lessonsThisMonth}회`}
-            helper="이번 달"
-          />
-          <StatCard
-            icon={Trophy}
-            label="게임 승리"
-            value={`${records.wins}승`}
-            helper={`${records.losses}패`}
-          />
-          <StatCard
-            icon={Medal}
-            label="승률"
-            value={
-              records.games
-                ? `${Math.round((records.wins / records.games) * 100)}%`
-                : '—'
-            }
-            helper={`${records.games}게임`}
-          />
-        </div>
-      </section>
+
+          <button
+            className={`button ${game.myAttendanceActive ? 'subtle' : 'primary'} home-game-button`}
+            type="button"
+            disabled={busyAction === 'game-attendance'}
+            onClick={() => void setGameAttendance(!game.myAttendanceActive)}
+          >
+            <CircleDot size={14} />
+            {game.myAttendanceActive ? '게임 참석 중 · 종료하기' : '오늘 게임 참석'}
+          </button>
+        </section>
+
+        <section className="panel home-card">
+          <div className="panel-head">
+            <h2>
+              <Trophy size={15} />
+              나의 기록
+            </h2>
+            <AppLink to="/records" className="panel-link">
+              전체
+              <ChevronRight size={13} />
+            </AppLink>
+          </div>
+          <div className="home-game-stats">
+            <div>
+              <span>전적</span>
+              <strong>
+                {records.wins}승 {records.losses}패
+              </strong>
+            </div>
+            <div>
+              <span>승률</span>
+              <strong>{winRate === null ? '—' : `${winRate}%`}</strong>
+            </div>
+            <div>
+              <span>게임</span>
+              <strong>{records.games}회</strong>
+            </div>
+          </div>
+        </section>
+      </div>
 
       <InstallCard />
     </div>

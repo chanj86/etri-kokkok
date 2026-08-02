@@ -2,16 +2,14 @@
 
 const sw = self as unknown as ServiceWorkerGlobalScope
 
-const CACHE_NAME = 'etri-kokkok-shell-v2'
+const CACHE_NAME = 'etri-kokkok-shell-v3'
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/badminton-icon.svg',
   '/apple-touch-icon.svg',
-  '/etri-badminton-hero.png',
   '/etri-logo.png',
-  '/etri-characters.png',
 ]
 
 interface PushPayload {

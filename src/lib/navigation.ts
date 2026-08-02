@@ -1,11 +1,18 @@
 import { useSyncExternalStore } from 'react'
 
-export type AppPath = '/' | '/lesson' | '/game' | '/records' | '/profile'
+export type AppPath =
+  | '/'
+  | '/lesson'
+  | '/game'
+  | '/community'
+  | '/records'
+  | '/profile'
 
 const validPaths = new Set<AppPath>([
   '/',
   '/lesson',
   '/game',
+  '/community',
   '/records',
   '/profile',
 ])

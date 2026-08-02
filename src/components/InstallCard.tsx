@@ -51,32 +51,33 @@ export function InstallCard() {
   return (
     <section className="install-card">
       <div className="install-copy">
-        <span className="section-kicker">놓치지 않게</span>
-        <h2>홈 화면 설치와 알림</h2>
-        <p>
-          앱처럼 빠르게 열고 내 레슨 시작 15분 전에 안내받으세요.
-        </p>
+        <strong>홈 화면 설치와 알림</strong>
+        <p>앱처럼 빠르게 열고 내 레슨 시작 15분 전에 안내받으세요.</p>
       </div>
       <div className="install-actions">
         {!standalone && installPrompt && (
-          <button className="button secondary" type="button" onClick={() => void install()}>
-            <Download size={18} />
+          <button
+            className="button subtle"
+            type="button"
+            onClick={() => void install()}
+          >
+            <Download size={14} />
             앱 설치
           </button>
         )}
         {!standalone && ios && !installPrompt && (
           <div className="ios-install-hint">
-            <Share size={18} />
+            <Share size={14} />
             Safari 공유 버튼에서 ‘홈 화면에 추가’를 선택하세요.
           </div>
         )}
         <button
-          className="button light"
+          className="button primary"
           type="button"
           disabled={busyAction === 'enable-notifications'}
           onClick={() => void enableNotifications()}
         >
-          <BellRing size={18} />
+          <BellRing size={14} />
           알림 켜기
         </button>
       </div>

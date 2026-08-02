@@ -1,42 +1,51 @@
 import {
-  Bot,
   Check,
+  ChevronRight,
   CircleDot,
-  Clock3,
   Gamepad2,
   Pencil,
   Plus,
   RefreshCcw,
   Sparkles,
+  Trash2,
   Trophy,
   UserMinus,
   UserPlus,
-  UsersRound,
   X,
 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
-import { EmptyState, PageHeader, StatusPill } from '../components/ui'
+import { type FormEvent, useEffect, useState } from 'react'
+import { Avatar } from '../components/Avatar'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { CourtMap } from '../components/CourtMap'
+import { MemberDetailModal } from '../components/MemberDetailModal'
+import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
-import { formatWaitTime } from '../lib/format'
+import { formatExperience, formatWaitTime } from '../lib/format'
 import { buildAutoArrangement } from '../lib/gameMatching'
-import type {
-  AutoArrangement,
-  GameSlot,
-  Team,
+import {
+  LESSON_COURT,
+  type AutoArrangement,
+  type CommunityMember,
+  type CourtName,
+  type GameSlot,
+  type Team,
 } from '../types'
 
-function TeamList({
-  team,
-  slot,
-}: {
-  team: Team
-  slot: GameSlot
-}) {
+function useNow(intervalMs = 30_000): number {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), intervalMs)
+    return () => window.clearInterval(timer)
+  }, [intervalMs])
+  return now
+}
+
+function TeamColumn({ team, slot }: { team: Team; slot: GameSlot }) {
   const players = slot.players.filter((player) => player.team === team)
   return (
     <div className={`team-column team-${team.toLowerCase()}`}>
       <div className="team-title">
-        <span>TEAM {team}</span>
+        <span>팀 {team}</span>
         {slot.result && (
           <strong>
             {team === 'A' ? slot.result.teamAScore : slot.result.teamBScore}
@@ -48,20 +57,14 @@ function TeamList({
         return player ? (
           <div className="player-chip" key={player.id}>
             <span>{player.nickname.slice(0, 1)}</span>
-            <div>
-              <strong>{player.nickname}</strong>
-              <small>밸런스 {Math.round(player.skillScore)}</small>
-            </div>
+            <strong>{player.nickname}</strong>
           </div>
         ) : (
           <div className="player-chip empty" key={`empty-${team}-${index}`}>
             <span>
-              <Plus size={15} />
+              <Plus size={12} />
             </span>
-            <div>
-              <strong>빈 자리</strong>
-              <small>참여 가능</small>
-            </div>
+            <strong>빈 자리</strong>
           </div>
         )
       })}
@@ -72,23 +75,21 @@ function TeamList({
 function SlotCard({
   slot,
   memberId,
-  canJoin,
-  attendanceActive,
   busy,
-  onJoin,
+  onJoinRequest,
   onLeave,
   onStart,
   onComplete,
+  onDeleteRequest,
 }: {
   slot: GameSlot
   memberId: string
-  canJoin: boolean
-  attendanceActive: boolean
   busy: boolean
-  onJoin: () => void
+  onJoinRequest: (slot: GameSlot) => void
   onLeave: () => void
   onStart: () => void
   onComplete: (teamAScore: number, teamBScore: number) => void
+  onDeleteRequest: () => void
 }) {
   const [teamAScore, setTeamAScore] = useState(
     String(slot.result?.teamAScore ?? 21),
@@ -109,83 +110,86 @@ function SlotCard({
   return (
     <article className={`game-slot-card ${slot.status}`}>
       <div className="slot-head">
-        <div>
-          <span className="section-kicker">{slot.courtName}</span>
-          <h3>
-            {slot.status === 'open' && `${slot.players.length}/4명 모집 중`}
-            {slot.status === 'playing' && '게임 진행 중'}
-            {slot.status === 'completed' && '게임 종료'}
-          </h3>
+        <div className="slot-head-info">
+          <strong>{slot.courtName}</strong>
+          <span
+            className={`lozenge ${
+              slot.status === 'playing'
+                ? 'warning'
+                : slot.status === 'completed'
+                  ? 'success'
+                  : 'inprogress'
+            }`}
+          >
+            {slot.status === 'open' && `모집중 ${slot.players.length}/4`}
+            {slot.status === 'playing' && '게임중'}
+            {slot.status === 'completed' && '종료'}
+          </span>
+          {slot.source === 'auto' && <span className="lozenge">자동 배치</span>}
         </div>
-        <StatusPill
-          tone={
-            slot.status === 'playing'
-              ? 'warning'
-              : slot.status === 'completed'
-                ? 'success'
-                : 'accent'
-          }
-        >
-          {slot.source === 'auto' ? '자동 배치' : '자율 참여'}
-        </StatusPill>
+        {(slot.status === 'open' || slot.status === 'playing') && (
+          <button
+            className="icon-button small danger"
+            type="button"
+            aria-label="게임 삭제"
+            disabled={busy}
+            onClick={onDeleteRequest}
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
       </div>
 
       <div className="versus-grid">
-        <TeamList team="A" slot={slot} />
+        <TeamColumn team="A" slot={slot} />
         <div className="versus-mark">VS</div>
-        <TeamList team="B" slot={slot} />
+        <TeamColumn team="B" slot={slot} />
       </div>
 
       {slot.status === 'open' && (
         <div className="slot-actions">
           {mine ? (
             <button
-              className="button secondary"
+              className="button subtle"
               type="button"
               disabled={busy}
               onClick={onLeave}
             >
-              <UserMinus size={18} />
-              슬롯 나가기
+              <UserMinus size={14} />
+              나가기
             </button>
           ) : (
             <button
               className="button primary"
               type="button"
-              disabled={busy || !attendanceActive || !canJoin || isFull}
-              onClick={onJoin}
+              disabled={busy || isFull}
+              onClick={() => onJoinRequest(slot)}
             >
-              <UserPlus size={18} />
-              {!attendanceActive
-                ? '먼저 게임 참석'
-                : !canJoin
-                  ? '순환 대기 중'
-                  : isFull
-                    ? '모집 완료'
-                    : '게임 참여'}
+              <UserPlus size={14} />
+              {isFull ? '모집 완료' : '게임 참여'}
             </button>
           )}
           <button
-            className="button dark"
+            className="button subtle"
             type="button"
             disabled={busy || !isFull}
             onClick={onStart}
           >
-            <Gamepad2 size={18} />
+            <Gamepad2 size={14} />
             게임 시작
           </button>
         </div>
       )}
 
       {slot.status === 'completed' && !editingResult && (
-        <div className="completed-actions">
+        <div className="slot-actions end">
           <button
-            className="button secondary"
+            className="button subtle"
             type="button"
             disabled={busy}
             onClick={() => setEditingResult(true)}
           >
-            <Pencil size={16} />
+            <Pencil size={13} />
             점수 수정
           </button>
         </div>
@@ -194,7 +198,7 @@ function SlotCard({
       {(slot.status === 'playing' || editingResult) && (
         <form className="score-form" onSubmit={submitScore}>
           <label>
-            <span>A팀</span>
+            <span>팀 A</span>
             <input
               type="number"
               min="0"
@@ -204,9 +208,9 @@ function SlotCard({
               onChange={(event) => setTeamAScore(event.target.value)}
             />
           </label>
-          <span>:</span>
+          <span className="score-colon">:</span>
           <label>
-            <span>B팀</span>
+            <span>팀 B</span>
             <input
               type="number"
               min="0"
@@ -217,7 +221,7 @@ function SlotCard({
             />
           </label>
           <button className="button primary" type="submit" disabled={busy}>
-            <Trophy size={18} />
+            <Trophy size={14} />
             {slot.status === 'completed' ? '수정 저장' : '전적 저장'}
           </button>
         </form>
@@ -240,52 +244,55 @@ function AutoArrangementPanel({
   onConfirm: () => void
 }) {
   return (
-    <section className="auto-panel">
-      <div className="auto-panel-head">
-        <div className="auto-icon">
-          <Bot size={23} />
-        </div>
-        <div>
-          <span className="section-kicker">설명 가능한 추천</span>
-          <h2>{arrangement.courtName} 자동 배치</h2>
-        </div>
-        <button className="icon-button" type="button" aria-label="닫기" onClick={onClose}>
-          <X size={19} />
+    <section className="panel auto-panel">
+      <div className="panel-head">
+        <h2>
+          <Sparkles size={15} />
+          {arrangement.courtName} 자동 배치 제안
+        </h2>
+        <button
+          className="icon-button small"
+          type="button"
+          aria-label="닫기"
+          onClick={onClose}
+        >
+          <X size={14} />
         </button>
       </div>
-
       <p className="auto-explanation">{arrangement.explanation}</p>
       <div className="auto-teams">
         {(['A', 'B'] as const).map((team) => (
-          <div key={team}>
+          <div className="auto-team" key={team}>
             <div className="auto-team-title">
-              <strong>TEAM {team}</strong>
+              <strong>팀 {team}</strong>
               <span>
-                예상 {team === 'A' ? arrangement.teamAScore : arrangement.teamBScore}
+                예상 전력{' '}
+                {team === 'A' ? arrangement.teamAScore : arrangement.teamBScore}
               </span>
             </div>
             {arrangement.candidates
               .filter((candidate) => candidate.team === team)
               .map((candidate) => (
                 <div className="auto-candidate" key={candidate.memberId}>
-                  <span>{candidate.nickname.slice(0, 1)}</span>
-                  <div>
-                    <strong>{candidate.nickname}</strong>
-                    <small>{candidate.reason}</small>
-                  </div>
-                  <em>{Math.round(candidate.skillScore)}</em>
+                  <strong>{candidate.nickname}</strong>
+                  <small>{candidate.reason}</small>
                 </div>
               ))}
           </div>
         ))}
       </div>
-      <div className="auto-actions">
-        <button className="button secondary" type="button" onClick={onRefresh}>
-          <RefreshCcw size={18} />
+      <div className="panel-actions">
+        <button className="button subtle" type="button" onClick={onRefresh}>
+          <RefreshCcw size={14} />
           다시 추천
         </button>
-        <button className="button lime" type="button" disabled={busy} onClick={onConfirm}>
-          <Check size={18} />
+        <button
+          className="button primary"
+          type="button"
+          disabled={busy}
+          onClick={onConfirm}
+        >
+          <Check size={14} />
           이 배치로 확정
         </button>
       </div>
@@ -303,14 +310,28 @@ export function GamePage() {
     leaveGameSlot,
     startGameSlot,
     completeGameSlot,
+    cancelGameSlot,
     confirmAutoArrangement,
   } = useApp()
-  const [courtNumber, setCourtNumber] = useState(1)
+  const now = useNow()
+  const [selectedCourt, setSelectedCourt] = useState<CourtName | null>(null)
+  const [lessonCourtConfirm, setLessonCourtConfirm] =
+    useState<CourtName | null>(null)
+  const [joinConfirm, setJoinConfirm] = useState<{
+    slotId: string
+    nth: number
+  } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<GameSlot | null>(null)
+  const [detailMember, setDetailMember] = useState<CommunityMember | null>(
+    null,
+  )
   const [arrangement, setArrangement] = useState<AutoArrangement | null>(null)
   const [autoError, setAutoError] = useState<string | null>(null)
 
   if (!snapshot) return null
-  const { game, member } = snapshot
+  const { game, member, community } = snapshot
+  const busy = Boolean(busyAction?.startsWith('game-'))
+
   const activeAttendees = game.attendees.filter((attendee) => attendee.active)
   const activeSlots = game.slots.filter(
     (slot) => slot.status === 'open' || slot.status === 'playing',
@@ -318,7 +339,15 @@ export function GamePage() {
   const completedSlots = game.slots.filter(
     (slot) => slot.status === 'completed',
   )
-  const busy = Boolean(busyAction?.startsWith('game-'))
+  const myAttendance = game.attendees.find(
+    (attendee) => attendee.memberId === member.id,
+  )
+  const myOccupied = activeSlots.some((slot) =>
+    slot.players.some((player) => player.memberId === member.id),
+  )
+  const selectedCourtBusy = selectedCourt
+    ? activeSlots.some((slot) => slot.courtName === selectedCourt)
+    : false
 
   const orderedAttendees = [...activeAttendees].sort((a, b) => {
     if (a.canJoin !== b.canJoin) return a.canJoin ? -1 : 1
@@ -326,171 +355,132 @@ export function GamePage() {
     return a.nickname.localeCompare(b.nickname, 'ko')
   })
 
+  const openMemberDetail = (memberId: string) => {
+    const found = community.members.find(
+      (communityMember) => communityMember.memberId === memberId,
+    )
+    if (found) setDetailMember(found)
+  }
+
+  const handleCourtSelect = (court: CourtName) => {
+    if (court === selectedCourt) {
+      setSelectedCourt(null)
+      return
+    }
+    if (court === LESSON_COURT) {
+      setLessonCourtConfirm(court)
+      return
+    }
+    setSelectedCourt(court)
+  }
+
+  const requestJoin = (slot: GameSlot) => {
+    if (!game.myAttendanceActive) return
+    if (myOccupied) return
+    if (myAttendance && !myAttendance.canJoin) {
+      const joinedToday = game.slots.filter((item) =>
+        item.players.some((player) => player.memberId === member.id),
+      ).length
+      setJoinConfirm({ slotId: slot.id, nth: joinedToday + 1 })
+      return
+    }
+    void joinGameSlot(slot.id)
+  }
+
   const generateAuto = () => {
+    if (!selectedCourt || selectedCourtBusy) {
+      setAutoError('먼저 배치도에서 비어 있는 코트를 선택해 주세요.')
+      return
+    }
     const next = buildAutoArrangement(
       game.attendees,
       game.currentCycle,
-      `${courtNumber}번 코트`,
+      selectedCourt,
     )
     setArrangement(next)
     setAutoError(
       next
         ? null
-        : '현재 순환에서 참여 가능한 회원이 4명 필요합니다. 남은 회원이 먼저 참여하면 다음 순환이 열립니다.',
+        : '이번 순환에서 참여 가능한 회원이 4명 필요합니다. 자동 배치는 순환 순서를 지키는 회원만 선택합니다.',
     )
   }
 
-  const createSlot = async () => {
-    await createGameSlot(`${courtNumber}번 코트`)
-    setCourtNumber((number) => number + 1)
+  const createManual = async () => {
+    if (!selectedCourt || selectedCourtBusy) {
+      setAutoError('먼저 배치도에서 비어 있는 코트를 선택해 주세요.')
+      return
+    }
+    setAutoError(null)
+    await createGameSlot(selectedCourt)
+    setSelectedCourt(null)
   }
 
   const confirmAuto = async () => {
     if (!arrangement) return
     await confirmAutoArrangement(arrangement)
     setArrangement(null)
-    setAutoError(null)
-    setCourtNumber((number) => number + 1)
+    setSelectedCourt(null)
   }
 
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="복식 4인 기준"
-        title="게임 참여"
-        description="빈 슬롯을 직접 선택하거나 공정한 자동 배치를 이용하세요."
+        title="게임"
+        description={`현재 ${game.currentCycle}번째 순환 · 참석 ${activeAttendees.length}명 · 진행 슬롯 ${activeSlots.length}개`}
         action={
           <button
-            className={`button ${game.myAttendanceActive ? 'secondary' : 'primary'}`}
+            className={`button ${game.myAttendanceActive ? 'subtle' : 'primary'}`}
             type="button"
             disabled={busyAction === 'game-attendance'}
             onClick={() => void setGameAttendance(!game.myAttendanceActive)}
           >
-            <CircleDot size={18} />
-            {game.myAttendanceActive ? '참석 중 · 종료' : '오늘 게임 참석'}
+            <CircleDot size={14} />
+            {game.myAttendanceActive ? '참석 종료' : '오늘 게임 참석'}
           </button>
         }
       />
 
-      <section className="cycle-board">
-        <div className="cycle-number">
-          <span>현재 순환</span>
-          <strong>{game.currentCycle}</strong>
-          <em>ROUND</em>
-        </div>
-        <div className="cycle-copy">
-          <div>
-            <StatusPill tone={game.myCanJoin ? 'success' : 'warning'}>
-              {game.myCanJoin ? '지금 참여 가능' : '다른 회원 순환 대기'}
-            </StatusPill>
-            <h2>
-              {game.myAttendanceActive
-                ? game.myCanJoin
-                  ? '빈 슬롯에 참여할 수 있어요'
-                  : '한 바퀴가 끝나면 다시 열려요'
-                : '게임 참석을 먼저 눌러 주세요'}
-            </h2>
-          </div>
-          <div className="cycle-stats">
-            <div>
-              <UsersRound size={19} />
-              <span>참석</span>
-              <strong>{activeAttendees.length}명</strong>
-            </div>
-            <div>
-              <Gamepad2 size={19} />
-              <span>활성 슬롯</span>
-              <strong>{activeSlots.length}개</strong>
-            </div>
+      <section className="panel">
+        <div className="panel-head">
+          <h2>코트 현황</h2>
+          <div className="court-legend">
+            <span className="legend-item free">사용 가능</span>
+            <span className="legend-item open">모집중</span>
+            <span className="legend-item playing">게임중</span>
           </div>
         </div>
-      </section>
-
-      <section className="surface-card attendee-board">
-        <div className="section-heading compact">
-          <div>
-            <span className="section-kicker">순환 현황</span>
-            <h2>오늘의 참석자</h2>
-          </div>
-          <span className="legend">
-            <i />
-            참여 가능
-          </span>
-        </div>
-        <div className="attendee-list">
-          {orderedAttendees.map((attendee, index) => (
-            <div
-              className={`attendee-item ${attendee.canJoin ? 'eligible' : 'waiting'}`}
-              key={attendee.id}
-            >
-              <span className="attendee-order">{index + 1}</span>
-              <div className="avatar">{attendee.nickname.slice(0, 1)}</div>
-              <div>
-                <strong>
-                  {attendee.nickname}
-                  {attendee.memberId === member.id && <em>나</em>}
-                </strong>
-                <small>
-                  {attendee.gamesPlayed}게임 · {formatWaitTime(attendee.lastGameAt)}
-                </small>
-              </div>
-              <StatusPill tone={attendee.canJoin ? 'success' : 'neutral'}>
-                {attendee.canJoin ? '가능' : '대기'}
-              </StatusPill>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="section-heading">
-          <div>
-            <span className="section-kicker">코트 열기</span>
-            <h2>새 게임 만들기</h2>
-          </div>
-          <div className="court-picker">
+        <CourtMap
+          slots={game.slots}
+          now={now}
+          selectedCourt={selectedCourt}
+          onSelectCourt={handleCourtSelect}
+        />
+        <div className="court-create-row">
+          <p className="court-create-hint">
+            {selectedCourt
+              ? `${selectedCourt} 선택됨 - 게임 방식을 선택하세요.`
+              : '비어 있는 코트를 눌러 새 게임을 만들 수 있습니다.'}
+          </p>
+          <div className="court-create-actions">
             <button
+              className="button primary"
               type="button"
-              aria-label="코트 번호 줄이기"
-              onClick={() => setCourtNumber((number) => Math.max(1, number - 1))}
+              disabled={busy || !selectedCourt || selectedCourtBusy}
+              onClick={() => void createManual()}
             >
-              −
+              <Plus size={14} />
+              자율 게임 만들기
             </button>
-            <strong>{courtNumber}번 코트</strong>
             <button
+              className="button subtle"
               type="button"
-              aria-label="코트 번호 늘리기"
-              onClick={() => setCourtNumber((number) => number + 1)}
+              disabled={busy || !selectedCourt || selectedCourtBusy}
+              onClick={generateAuto}
             >
-              +
+              <Sparkles size={14} />
+              자동 배치
             </button>
           </div>
-        </div>
-        <div className="create-game-grid">
-          <button
-            className="create-game-card manual"
-            type="button"
-            disabled={busy}
-            onClick={() => void createSlot()}
-          >
-            <div>
-              <Plus size={23} />
-            </div>
-            <strong>자율 참여 슬롯</strong>
-            <span>회원들이 직접 4자리를 채워요</span>
-          </button>
-          <button
-            className="create-game-card auto"
-            type="button"
-            disabled={busy}
-            onClick={generateAuto}
-          >
-            <div>
-              <Sparkles size={23} />
-            </div>
-            <strong>자동 균형 배치</strong>
-            <span>대기와 실력을 고려해 추천해요</span>
-          </button>
         </div>
         {autoError && <p className="inline-error">{autoError}</p>}
       </section>
@@ -505,67 +495,160 @@ export function GamePage() {
         />
       )}
 
-      <section>
-        <div className="section-heading">
-          <div>
-            <span className="section-kicker">실시간 코트</span>
-            <h2>열린 게임</h2>
+      <div className="game-columns">
+        <section className="panel">
+          <div className="panel-head">
+            <h2>진행 중인 게임</h2>
+            <span className="panel-count">{activeSlots.length}</span>
           </div>
-          <StatusPill tone="accent">{activeSlots.length}개</StatusPill>
-        </div>
-        {activeSlots.length ? (
-          <div className="slot-grid">
-            {activeSlots.map((slot) => (
-              <SlotCard
-                key={slot.id}
-                slot={slot}
-                memberId={member.id}
-                canJoin={game.myCanJoin}
-                attendanceActive={game.myAttendanceActive}
-                busy={busy}
-                onJoin={() => void joinGameSlot(slot.id)}
-                onLeave={() => void leaveGameSlot(slot.id)}
-                onStart={() => void startGameSlot(slot.id)}
-                onComplete={(a, b) => void completeGameSlot(slot.id, a, b)}
-              />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={Gamepad2}
-            title="아직 열린 게임이 없어요"
-            description="새 자율 참여 슬롯을 만들거나 자동 배치를 시작해 보세요."
-          />
-        )}
-      </section>
-
-      {completedSlots.length > 0 && (
-        <section>
-          <div className="section-heading">
-            <div>
-              <span className="section-kicker">오늘 완료</span>
-              <h2>최근 게임</h2>
+          {activeSlots.length ? (
+            <div className="slot-list">
+              {activeSlots.map((slot) => (
+                <SlotCard
+                  key={slot.id}
+                  slot={slot}
+                  memberId={member.id}
+                  busy={busy}
+                  onJoinRequest={requestJoin}
+                  onLeave={() => void leaveGameSlot(slot.id)}
+                  onStart={() => void startGameSlot(slot.id)}
+                  onComplete={(a, b) => void completeGameSlot(slot.id, a, b)}
+                  onDeleteRequest={() => setDeleteConfirm(slot)}
+                />
+              ))}
             </div>
-            <Clock3 size={20} />
-          </div>
-          <div className="slot-grid">
-            {completedSlots.slice(0, 2).map((slot) => (
-              <SlotCard
-                key={slot.id}
-                slot={slot}
-                memberId={member.id}
-                canJoin={false}
-                attendanceActive={game.myAttendanceActive}
-                busy={busy}
-                onJoin={() => undefined}
-                onLeave={() => undefined}
-                onStart={() => undefined}
-                onComplete={(a, b) => void completeGameSlot(slot.id, a, b)}
-              />
-            ))}
-          </div>
+          ) : (
+            <EmptyState
+              icon={Gamepad2}
+              title="열린 게임이 없습니다"
+              description="배치도에서 코트를 선택해 게임을 만들어 보세요."
+            />
+          )}
+
+          {completedSlots.length > 0 && (
+            <>
+              <div className="panel-head sub">
+                <h2>오늘 완료</h2>
+                <span className="panel-count">{completedSlots.length}</span>
+              </div>
+              <div className="slot-list">
+                {completedSlots.slice(0, 3).map((slot) => (
+                  <SlotCard
+                    key={slot.id}
+                    slot={slot}
+                    memberId={member.id}
+                    busy={busy}
+                    onJoinRequest={() => undefined}
+                    onLeave={() => undefined}
+                    onStart={() => undefined}
+                    onComplete={(a, b) => void completeGameSlot(slot.id, a, b)}
+                    onDeleteRequest={() => undefined}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </section>
-      )}
+
+        <section className="panel">
+          <div className="panel-head">
+            <h2>오늘의 참석자</h2>
+            <span className="panel-count">{orderedAttendees.length}</span>
+          </div>
+          {orderedAttendees.length ? (
+            <ul className="attendee-list">
+              {orderedAttendees.map((attendee) => (
+                <li key={attendee.id}>
+                  <button
+                    type="button"
+                    className="attendee-row"
+                    onClick={() => openMemberDetail(attendee.memberId)}
+                  >
+                    <Avatar
+                      name={attendee.nickname}
+                      url={attendee.avatarUrl}
+                      size={32}
+                    />
+                    <span className="attendee-name">
+                      {attendee.nickname}
+                      {attendee.memberId === member.id && (
+                        <em className="me-tag">나</em>
+                      )}
+                    </span>
+                    <span className="attendee-meta">
+                      구력 {formatExperience(attendee.experienceMonths)} ·{' '}
+                      {attendee.gamesPlayed}게임 ·{' '}
+                      {formatWaitTime(attendee.lastGameAt)}
+                    </span>
+                    <span
+                      className={`lozenge ${attendee.canJoin ? 'success' : ''}`}
+                    >
+                      {attendee.canJoin ? '차례' : '대기'}
+                    </span>
+                    <ChevronRight size={14} className="attendee-chevron" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={CircleDot}
+              title="아직 참석자가 없습니다"
+              description="오늘 게임 참석 버튼을 눌러 첫 번째로 참여해 보세요."
+            />
+          )}
+        </section>
+      </div>
+
+      <MemberDetailModal
+        member={detailMember}
+        onClose={() => setDetailMember(null)}
+      />
+
+      <ConfirmDialog
+        open={lessonCourtConfirm !== null}
+        title="레슨 코트 안내"
+        message="이 코트는 레슨 코트입니다. 레슨이 없는 경우에만 사용 가능합니다. 계속하시겠습니까?"
+        confirmLabel="사용하기"
+        onConfirm={() => {
+          if (lessonCourtConfirm) setSelectedCourt(lessonCourtConfirm)
+          setLessonCourtConfirm(null)
+        }}
+        onCancel={() => setLessonCourtConfirm(null)}
+      />
+
+      <ConfirmDialog
+        open={joinConfirm !== null}
+        title="순환 순서 안내"
+        message={`현재 ${joinConfirm?.nth ?? 0}번째 게임 참여입니다. (현재 순환 ${game.currentCycle}회) 아직 순환하지 않은 회원이 있습니다. 그래도 참여하시겠습니까?`}
+        confirmLabel="참여하기"
+        busy={busy}
+        onConfirm={() => {
+          if (joinConfirm) void joinGameSlot(joinConfirm.slotId)
+          setJoinConfirm(null)
+        }}
+        onCancel={() => setJoinConfirm(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirm !== null}
+        title="게임 삭제"
+        message={
+          deleteConfirm
+            ? `${deleteConfirm.courtName}의 ${
+                deleteConfirm.status === 'playing' ? '진행 중인 ' : ''
+              }게임을 삭제할까요? 참여자들은 다시 다른 게임에 참여할 수 있게 됩니다.`
+            : ''
+        }
+        confirmLabel="삭제"
+        tone="danger"
+        busy={busy}
+        onConfirm={() => {
+          if (deleteConfirm) void cancelGameSlot(deleteConfirm.id)
+          setDeleteConfirm(null)
+        }}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   )
 }

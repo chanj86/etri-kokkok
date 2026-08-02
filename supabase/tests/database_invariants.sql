@@ -57,27 +57,19 @@ values (
   '타동호회'
 );
 
-insert into public.member_credentials (
-  member_id,
-  club_id,
-  login_name_normalized,
-  auth_email
-)
-select
-  id,
-  club_id,
-  nickname_normalized,
-  'credential-' || id || '@test.invalid'
-from public.members;
-
 do $$
 declare
   first_slot uuid;
   second_slot uuid;
   auto_slot uuid;
+  third_slot uuid;
+  ahead_slot uuid;
+  reuse_slot uuid;
   current_round integer;
   blocked boolean := false;
   user_id uuid;
+  notice_id uuid;
+  matching_id uuid;
 begin
   for user_id in
     select
@@ -93,8 +85,30 @@ begin
     '00000000-0000-0000-0000-000000000101',
     true
   );
-  first_slot := public.create_game_slot('1번 코트');
-  second_slot := public.create_game_slot('2번 코트');
+  first_slot := public.create_game_slot('코트 B');
+  second_slot := public.create_game_slot('코트 C');
+
+  -- 허용되지 않은 코트 이름은 거부한다.
+  blocked := false;
+  begin
+    perform public.create_game_slot('1번 코트');
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '허용되지 않은 코트 이름이 차단되지 않았습니다.';
+  end if;
+
+  -- 같은 코트에 활성 게임이 있으면 새 게임을 만들 수 없다.
+  blocked := false;
+  begin
+    perform public.create_game_slot('코트 B');
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '사용 중인 코트의 중복 생성이 차단되지 않았습니다.';
+  end if;
 
   for user_id in
     select
@@ -114,11 +128,13 @@ begin
     raise exception '미참여 회원이 있는데 순환이 먼저 증가했습니다.';
   end if;
 
+  -- 활성 슬롯에 참여 중이면 다른 슬롯에 들어갈 수 없다.
   perform set_config(
     'request.jwt.claim.sub',
     '00000000-0000-0000-0000-000000000101',
     true
   );
+  blocked := false;
   begin
     perform public.join_game_slot(second_slot);
   exception
@@ -126,7 +142,7 @@ begin
       blocked := true;
   end;
   if not blocked then
-    raise exception '같은 순환의 중복 참여가 차단되지 않았습니다.';
+    raise exception '활성 슬롯 참여 중 다른 슬롯 참여가 차단되지 않았습니다.';
   end if;
 
   for user_id in
@@ -215,7 +231,7 @@ begin
   perform public.complete_game_slot(second_slot, 18, 21);
 
   auto_slot := public.confirm_auto_arrangement(
-    '3번 코트',
+    '코트 A',
     '[
       {"memberId":"00000000-0000-0000-0000-000000000103","team":"A"},
       {"memberId":"00000000-0000-0000-0000-000000000104","team":"B"},
@@ -241,6 +257,11 @@ begin
     raise exception '두 번째 순환 완료 후 다음 순환이 열리지 않았습니다.';
   end if;
 
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000102',
+    true
+  );
   if (
     public.get_my_partner_stats() -> 0 ->> 'memberId'
   )::uuid <> '00000000-0000-0000-0000-000000000101'
@@ -251,6 +272,132 @@ begin
       public.get_my_partner_stats() -> 0 ->> 'wins'
     )::integer <> 1 then
     raise exception '파트너별 게임 수와 승리 횟수가 정확하지 않습니다.';
+  end if;
+
+  -- 권고 순환: 자기 차례가 아니어도 참여할 수 있다. ------------------------
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000101',
+    true
+  );
+  perform public.start_game_slot(auto_slot);
+  perform public.complete_game_slot(auto_slot, 21, 15);
+
+  third_slot := public.create_game_slot('코트 B');
+  for user_id in
+    select
+      ('00000000-0000-0000-0000-' || lpad(value::text, 12, '0'))::uuid
+    from generate_series(101, 104) as value
+  loop
+    perform set_config('request.jwt.claim.sub', user_id::text, true);
+    perform public.join_game_slot(third_slot);
+  end loop;
+
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000101',
+    true
+  );
+  perform public.start_game_slot(third_slot);
+  perform public.complete_game_slot(third_slot, 21, 10);
+
+  -- 회원 101 은 이번 순환(3)에 이미 참여했지만, 다시 참여할 수 있어야 한다.
+  ahead_slot := public.create_game_slot('코트 C');
+  perform public.join_game_slot(ahead_slot);
+
+  if (
+    select count(*)
+    from public.game_slot_players
+    where slot_id = ahead_slot
+      and member_id = '00000000-0000-0000-0000-000000000101'
+  ) <> 1 then
+    raise exception '순환을 앞선 참여가 허용되지 않았습니다.';
+  end if;
+
+  -- 게임 취소: 상태가 cancelled 로 바뀌고 참여자 순환이 되돌아간다. ----------
+  perform public.cancel_game_slot(ahead_slot);
+
+  if (
+    select status
+    from public.game_slots
+    where id = ahead_slot
+  ) <> 'cancelled' then
+    raise exception '게임 취소가 반영되지 않았습니다.';
+  end if;
+
+  if (
+    select last_joined_cycle
+    from public.game_attendances
+    where member_id = '00000000-0000-0000-0000-000000000101'
+      and game_day_id = (
+        select id
+        from public.game_days
+        where club_id = '00000000-0000-0000-0000-000000000001'
+          and game_date = public.seoul_today()
+      )
+  ) <> 2 then
+    raise exception '게임 취소 후 순환 상태가 되돌아가지 않았습니다.';
+  end if;
+
+  -- 취소된 코트는 다시 사용할 수 있다.
+  reuse_slot := public.create_game_slot('코트 C');
+  perform public.cancel_game_slot(reuse_slot);
+
+  -- 게시판: 공지는 관리자만, 매칭 글은 모두 작성할 수 있다. -----------------
+  notice_id := public.create_post(
+    'notice',
+    '이번 주 운영 안내',
+    '수요일은 레슨이 없습니다.'
+  );
+
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000102',
+    true
+  );
+  blocked := false;
+  begin
+    perform public.create_post('notice', '일반 회원 공지', '작성 시도');
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '일반 회원의 공지 작성이 차단되지 않았습니다.';
+  end if;
+
+  matching_id := public.create_post(
+    'matching',
+    '토요일 외부 게스트 게임',
+    '2명 모집합니다.'
+  );
+  perform public.delete_post(matching_id);
+
+  if exists (select 1 from public.posts where id = matching_id) then
+    raise exception '본인 글 삭제가 동작하지 않았습니다.';
+  end if;
+
+  if not exists (select 1 from public.posts where id = notice_id) then
+    raise exception '공지 글이 저장되지 않았습니다.';
+  end if;
+
+  -- 프로필 사진 주소 검증 ---------------------------------------------------
+  perform public.update_my_avatar('https://example.invalid/avatar.jpg');
+  if (
+    select avatar_url
+    from public.members
+    where id = '00000000-0000-0000-0000-000000000102'
+  ) <> 'https://example.invalid/avatar.jpg' then
+    raise exception '프로필 사진 주소가 저장되지 않았습니다.';
+  end if;
+
+  blocked := false;
+  begin
+    perform public.update_my_avatar('javascript:alert(1)');
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '잘못된 사진 주소가 차단되지 않았습니다.';
   end if;
 end;
 $$;
@@ -343,13 +490,29 @@ select set_config(
 );
 
 do $$
+declare
+  snapshot jsonb;
 begin
   if (select count(*) from public.clubs) <> 1 then
     raise exception 'RLS가 다른 동호회 조회를 차단하지 못했습니다.';
   end if;
 
-  if public.get_app_snapshot() -> 'member' ->> 'nickname' <> '회원1' then
+  snapshot := public.get_app_snapshot();
+
+  if snapshot -> 'member' ->> 'nickname' <> '회원1' then
     raise exception '앱 스냅샷이 현재 회원 정보를 반환하지 못했습니다.';
+  end if;
+
+  if jsonb_array_length(snapshot -> 'community' -> 'members') <> 6 then
+    raise exception '커뮤니티 회원 목록이 정확하지 않습니다.';
+  end if;
+
+  if jsonb_array_length(snapshot -> 'community' -> 'notices') <> 1 then
+    raise exception '커뮤니티 공지 목록이 정확하지 않습니다.';
+  end if;
+
+  if (snapshot -> 'community' -> 'members' -> 0) ->> 'games' is null then
+    raise exception '회원별 전적 집계가 포함되지 않았습니다.';
   end if;
 end;
 $$;

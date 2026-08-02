@@ -1,12 +1,14 @@
 import {
   BellRing,
+  Camera,
   Check,
   Clock3,
   LogOut,
   ShieldCheck,
   UserRound,
 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
+import { Avatar } from '../components/Avatar'
 import { PageHeader, StatusPill } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { formatExperience, genderLabel } from '../lib/format'
@@ -18,10 +20,12 @@ export function ProfilePage() {
     demoMode,
     busyAction,
     saveProfile,
+    uploadAvatar,
     enableNotifications,
     logout,
   } = useApp()
   const member = snapshot?.member
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [nickname, setNickname] = useState(member?.nickname ?? '')
   const [gender, setGender] = useState<Gender>(member?.gender ?? 'unspecified')
   const [experienceMonths, setExperienceMonths] = useState(
@@ -57,9 +61,28 @@ export function ProfilePage() {
       />
 
       <section className="profile-summary">
-        <div className="profile-avatar">
-          {member.nickname.slice(0, 1)}
-          <span />
+        <div className="profile-avatar-wrap">
+          <Avatar name={member.nickname} url={member.avatarUrl} size={64} />
+          <button
+            className="avatar-upload-button"
+            type="button"
+            aria-label="프로필 사진 변경"
+            disabled={busyAction === 'avatar-upload'}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Camera size={13} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) void uploadAvatar(file)
+              event.target.value = ''
+            }}
+          />
         </div>
         <div>
           <span className="section-kicker">{member.clubName}</span>
@@ -67,6 +90,7 @@ export function ProfilePage() {
           <p>
             {formatExperience(member.experienceMonths)} ·{' '}
             {genderLabel(member.gender)}
+            {busyAction === 'avatar-upload' && ' · 사진 올리는 중...'}
           </p>
         </div>
         <StatusPill tone="accent">

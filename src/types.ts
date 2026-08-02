@@ -4,11 +4,17 @@ export type LessonStatus = 'waiting' | 'completed' | 'cancelled'
 export type GameSlotStatus = 'open' | 'playing' | 'completed' | 'cancelled'
 export type Team = 'A' | 'B'
 
+export type CourtName = '코트 A' | '코트 B' | '코트 C'
+
+export const COURT_NAMES: CourtName[] = ['코트 A', '코트 B', '코트 C']
+export const LESSON_COURT: CourtName = '코트 A'
+
 export interface Member {
   id: string
   clubId: string
   clubName: string
   nickname: string
+  avatarUrl: string | null
   role: MemberRole
   gender: Gender
   experienceMonths: number
@@ -40,6 +46,7 @@ export interface GameAttendance {
   id: string
   memberId: string
   nickname: string
+  avatarUrl: string | null
   gender: Gender
   experienceMonths: number
   lessonCount: number
@@ -71,6 +78,7 @@ export interface GameSlot {
   status: GameSlotStatus
   source: 'manual' | 'auto'
   createdAt: string
+  startedAt: string | null
   players: GamePlayer[]
   result: GameResult | null
 }
@@ -120,10 +128,44 @@ export interface RecordSummary {
   partnerStats: PartnerRecord[]
 }
 
+export type PostCategory = 'notice' | 'matching'
+
+export interface Post {
+  id: string
+  category: PostCategory
+  title: string
+  content: string
+  authorId: string
+  authorNickname: string
+  authorAvatarUrl: string | null
+  createdAt: string
+}
+
+export interface CommunityMember {
+  memberId: string
+  nickname: string
+  avatarUrl: string | null
+  role: MemberRole
+  gender: Gender
+  experienceMonths: number
+  lessonCount: number
+  joinedAt: string
+  games: number
+  wins: number
+  losses: number
+}
+
+export interface CommunitySnapshot {
+  members: CommunityMember[]
+  notices: Post[]
+  matching: Post[]
+}
+
 export interface AppSnapshot {
   member: Member
   lesson: LessonSnapshot
   game: GameSnapshot
+  community: CommunitySnapshot
   records: RecordSummary
 }
 

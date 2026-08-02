@@ -1,9 +1,4 @@
-import {
-  ArrowRight,
-  LockKeyhole,
-  Phone,
-  ShieldCheck,
-} from 'lucide-react'
+import { ArrowRight, LockKeyhole, Phone, ShieldCheck } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { z } from 'zod'
 import { useApp } from '../hooks/useApp'
@@ -43,12 +38,10 @@ function formatPhoneInput(value: string): string {
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
 }
 
-const initialPhone = ''
-
 export function LoginPage() {
   const { signIn, enterDemo, busyAction } = useApp()
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [phone, setPhone] = useState(initialPhone)
+  const [phone, setPhone] = useState('')
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -79,37 +72,17 @@ export function LoginPage() {
 
   return (
     <main className="auth-page">
-      <section className="auth-visual">
-        <img
-          className="auth-visual-image"
-          src="/etri-badminton-hero.png"
-          alt="점프 스매시를 하는 배드민턴 선수 일러스트"
-        />
-      </section>
+      <div className="auth-column">
+        <header className="auth-brand">
+          <img className="auth-brand-logo" src="/etri-logo.png" alt="ETRI" />
+          <h1 className="auth-brand-name">콕콕</h1>
+          <p className="auth-brand-tagline">
+            배드민턴 레슨 순서와 게임 순환을 한곳에서
+          </p>
+        </header>
 
-      <section className="auth-panel">
-        <div className="auth-form-wrap">
-          <div className="auth-heading">
-            <img className="auth-etri-logo" src="/etri-logo.png" alt="ETRI" />
-            <p className="eyebrow">{mode === 'login' ? '다시 만나 반가워요' : '새 회원 등록'}</p>
-            <h2>{mode === 'login' ? 'ETRI 콕콕 로그인' : 'ETRI 회원 등록'}</h2>
-            <p>휴대전화 번호와 비밀번호로 간편하게 시작합니다.</p>
-          </div>
-
-          {!isSupabaseConfigured && (
-            <div className="demo-callout">
-              <div>
-                <strong>서버 연결 전 미리보기</strong>
-                <span>예시 데이터로 모든 화면을 둘러볼 수 있어요.</span>
-              </div>
-              <button type="button" onClick={() => enterDemo('민준')}>
-                데모 입장
-                <ArrowRight size={17} />
-              </button>
-            </div>
-          )}
-
-          <div className="auth-tabs" role="tablist" aria-label="인증 방식">
+        <section className="auth-card">
+          <div className="segmented" role="tablist" aria-label="인증 방식">
             <button
               type="button"
               role="tab"
@@ -134,14 +107,16 @@ export function LoginPage() {
             <label>
               <span>휴대전화 번호</span>
               <div className="input-with-icon">
-                <Phone size={18} />
+                <Phone size={15} />
                 <input
                   type="tel"
                   inputMode="tel"
                   autoComplete="username"
                   placeholder="010-1234-5678"
                   value={phone}
-                  onChange={(event) => setPhone(formatPhoneInput(event.target.value))}
+                  onChange={(event) =>
+                    setPhone(formatPhoneInput(event.target.value))
+                  }
                 />
               </div>
             </label>
@@ -150,7 +125,7 @@ export function LoginPage() {
                 <span>이름 또는 닉네임</span>
                 <input
                   autoComplete="name"
-                  placeholder="ETRI에서 사용하는 이름"
+                  placeholder="동호회에서 사용하는 이름"
                   value={nickname}
                   onChange={(event) => setNickname(event.target.value)}
                 />
@@ -159,10 +134,12 @@ export function LoginPage() {
             <label>
               <span>비밀번호</span>
               <div className="input-with-icon">
-                <LockKeyhole size={18} />
+                <LockKeyhole size={15} />
                 <input
                   type="password"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  autoComplete={
+                    mode === 'login' ? 'current-password' : 'new-password'
+                  }
                   minLength={8}
                   maxLength={64}
                   placeholder="8자 이상 입력"
@@ -175,7 +152,7 @@ export function LoginPage() {
               <label>
                 <span>비밀번호 확인</span>
                 <div className="input-with-icon">
-                  <LockKeyhole size={18} />
+                  <LockKeyhole size={15} />
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -183,7 +160,9 @@ export function LoginPage() {
                     maxLength={64}
                     placeholder="비밀번호 다시 입력"
                     value={passwordConfirm}
-                    onChange={(event) => setPasswordConfirm(event.target.value)}
+                    onChange={(event) =>
+                      setPasswordConfirm(event.target.value)
+                    }
                   />
                 </div>
               </label>
@@ -199,18 +178,28 @@ export function LoginPage() {
               {busyAction === 'auth'
                 ? '확인 중...'
                 : mode === 'login'
-                  ? '입장하기'
+                  ? '로그인'
                   : '가입하고 시작하기'}
-              <ArrowRight size={18} />
+              <ArrowRight size={15} />
             </button>
           </form>
 
-          <p className="security-note">
-            <ShieldCheck size={17} />
-            전화번호는 로그인 식별용 해시로 변환되며 원문을 저장하지 않습니다.
-          </p>
-        </div>
-      </section>
+          {!isSupabaseConfigured && (
+            <button
+              className="button subtle demo-button"
+              type="button"
+              onClick={() => enterDemo('민준')}
+            >
+              데모 데이터로 둘러보기
+            </button>
+          )}
+        </section>
+
+        <p className="auth-note">
+          <ShieldCheck size={13} />
+          전화번호는 로그인 식별용 해시로 변환되며 원문을 저장하지 않습니다.
+        </p>
+      </div>
     </main>
   )
 }

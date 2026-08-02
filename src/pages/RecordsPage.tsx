@@ -1,13 +1,5 @@
-import {
-  CalendarCheck2,
-  Handshake,
-  Medal,
-  Minus,
-  TrendingUp,
-  Trophy,
-} from 'lucide-react'
-import type { CSSProperties } from 'react'
-import { EmptyState, PageHeader, StatCard, StatusPill } from '../components/ui'
+import { CalendarCheck2, Handshake, TrendingUp, Trophy } from 'lucide-react'
+import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { formatShortDate } from '../lib/format'
 
@@ -28,130 +20,92 @@ export function RecordsPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="꾸준함이 실력이 되는 곳"
-        title="나의 기록"
+        title="기록"
         description="레슨 참석과 게임 전적을 모아 확인하세요."
       />
 
-      <div className="stats-grid records-stats">
-        <StatCard
-          icon={CalendarCheck2}
-          label="이번 달 레슨"
-          value={`${lesson.monthlyCount}회`}
-          helper="취소 제외"
-        />
-        <StatCard
-          icon={Trophy}
-          label="전체 전적"
-          value={`${records.wins}승 ${records.losses}패`}
-          helper={`${records.games}게임`}
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="승률"
-          value={`${winRate}%`}
-          helper={records.games ? '기록된 게임 기준' : '첫 게임을 기다려요'}
-        />
+      <div className="stats-grid">
+        <article className="stat-card">
+          <span className="stat-label">
+            <CalendarCheck2 size={13} />
+            이번 달 레슨
+          </span>
+          <strong>{lesson.monthlyCount}회</strong>
+          <small>취소 제외</small>
+        </article>
+        <article className="stat-card">
+          <span className="stat-label">
+            <Trophy size={13} />
+            전체 전적
+          </span>
+          <strong>
+            {records.wins}승 {records.losses}패
+          </strong>
+          <small>{records.games}게임</small>
+        </article>
+        <article className="stat-card">
+          <span className="stat-label">
+            <TrendingUp size={13} />
+            승률
+          </span>
+          <strong>{records.games ? `${winRate}%` : '—'}</strong>
+          <small>
+            {records.games ? '기록된 게임 기준' : '첫 게임을 기다려요'}
+          </small>
+        </article>
       </div>
 
-      <section className="surface-card progress-card">
-        <div className="progress-copy">
-          <div
-            className="progress-ring"
-            style={
-              { '--progress': `${winRate * 3.6}deg` } as CSSProperties
-            }
-          >
-            <div>
-              <strong>{winRate}%</strong>
-              <span>승률</span>
-            </div>
-          </div>
-          <div>
-            <span className="section-kicker">게임 밸런스</span>
-            <h2>
-              {records.games === 0
-                ? '첫 전적을 기록해 보세요'
-                : winRate >= 60
-                  ? '좋은 흐름을 이어가고 있어요'
-                  : '다음 게임에서 반전을 노려보세요'}
-            </h2>
-            <p>자동 배치는 전적이 아닌 구력과 레슨 기록으로 팀 균형을 맞춥니다.</p>
-          </div>
-        </div>
-        <div className="record-breakdown">
-          <div className="win">
-            <Medal size={18} />
-            <span>승리</span>
-            <strong>{records.wins}</strong>
-          </div>
-          <div className="loss">
-            <Minus size={18} />
-            <span>패배</span>
-            <strong>{records.losses}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section className="surface-card partner-record-card">
-        <div className="section-heading compact">
-          <div>
-            <span className="section-kicker">함께 만든 승리</span>
-            <h2>파트너별 전적</h2>
-          </div>
-          <StatusPill tone="accent">
-            {records.partnerStats.length}명
-          </StatusPill>
+      <section className="panel">
+        <div className="panel-head">
+          <h2>
+            <Handshake size={15} />
+            파트너별 전적
+          </h2>
+          <span className="panel-count">{records.partnerStats.length}</span>
         </div>
 
         {records.partnerStats.length ? (
-          <div className="partner-record-grid">
-            {records.partnerStats.map((partner, index) => (
-              <article className="partner-record-item" key={partner.memberId}>
-                <div className="partner-record-head">
-                  <div className="partner-avatar">
-                    {partner.nickname.slice(0, 1)}
-                  </div>
-                  <div>
-                    <strong>{partner.nickname}</strong>
-                    <span>함께 {partner.games}게임</span>
-                  </div>
-                  {index === 0 && partner.wins > 0 && (
-                    <StatusPill tone="success">최다 승리</StatusPill>
-                  )}
-                </div>
-                <div className="partner-record-score">
-                  <div>
-                    <strong>{partner.wins}승</strong>
-                    <span>{partner.losses}패</span>
-                  </div>
-                  <em>승률 {partner.winRate}%</em>
-                </div>
-                <div className="partner-rate-track" aria-hidden="true">
-                  <span style={{ width: `${partner.winRate}%` }} />
-                </div>
-                <small>
-                  마지막 경기 {formatShortDate(partner.lastPlayedAt)}
-                </small>
-              </article>
+          <div className="partner-table">
+            <div className="partner-table-head">
+              <span>파트너</span>
+              <span>게임</span>
+              <span>승-패</span>
+              <span>승률</span>
+              <span>마지막 경기</span>
+            </div>
+            {records.partnerStats.map((partner) => (
+              <div className="partner-table-row" key={partner.memberId}>
+                <span className="partner-name">{partner.nickname}</span>
+                <span>{partner.games}</span>
+                <span>
+                  {partner.wins}-{partner.losses}
+                </span>
+                <span className="partner-rate">
+                  <i style={{ width: `${partner.winRate}%` }} />
+                  <em>{partner.winRate}%</em>
+                </span>
+                <span className="partner-date">
+                  {formatShortDate(partner.lastPlayedAt)}
+                </span>
+              </div>
             ))}
           </div>
         ) : (
           <EmptyState
             icon={Handshake}
             title="아직 파트너 전적이 없어요"
-            description="복식 게임 전적을 저장하면 파트너별 게임 수와 승리 횟수를 보여드려요."
+            description="복식 게임 전적을 저장하면 파트너별 승리 기록이 집계됩니다."
           />
         )}
       </section>
 
-      <section className="surface-card">
-        <div className="section-heading compact">
-          <div>
-            <span className="section-kicker">저장된 전적</span>
-            <h2>최근 게임</h2>
-          </div>
-          <StatusPill tone="neutral">{myGames.length}건</StatusPill>
+      <section className="panel">
+        <div className="panel-head">
+          <h2>
+            <Trophy size={15} />
+            최근 게임
+          </h2>
+          <span className="panel-count">{myGames.length}</span>
         </div>
 
         {myGames.length ? (
@@ -164,27 +118,26 @@ export function RecordsPage() {
               const teammates = slot.players
                 .filter(
                   (player) =>
-                    player.team === mine?.team && player.memberId !== member.id,
+                    player.team === mine?.team &&
+                    player.memberId !== member.id,
                 )
                 .map((player) => player.nickname)
                 .join(', ')
               return (
                 <article className="record-row" key={slot.id}>
-                  <div className={`result-mark ${didWin ? 'win' : 'loss'}`}>
-                    {didWin ? 'W' : 'L'}
-                  </div>
-                  <div className="record-detail">
+                  <span className={`result-mark ${didWin ? 'win' : 'loss'}`}>
+                    {didWin ? '승' : '패'}
+                  </span>
+                  <span className="record-detail">
                     <strong>{slot.courtName}</strong>
-                    <span>
-                      TEAM {mine?.team} · 파트너 {teammates || '—'}
-                    </span>
-                  </div>
-                  <div className="record-score">
+                    <small>파트너 {teammates || '—'}</small>
+                  </span>
+                  <span className="record-score">
                     <strong>
                       {slot.result?.teamAScore} : {slot.result?.teamBScore}
                     </strong>
                     <small>{formatShortDate(slot.createdAt)}</small>
-                  </div>
+                  </span>
                 </article>
               )
             })}

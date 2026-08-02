@@ -7,12 +7,14 @@ import {
 } from 'react'
 import {
   authenticateWithPhone,
+  communityApi,
   enablePushNotifications,
   fetchSnapshot,
   gameApi,
   lessonApi,
   subscribeToClubChanges,
   updateProfile,
+  uploadAvatarPhoto,
 } from '../lib/api'
 import { createDemoSnapshot } from '../lib/demoData'
 import { calculateSkillScore } from '../lib/gameMatching'
@@ -23,6 +25,8 @@ import type {
   AutoArrangement,
   GamePlayer,
   GameSnapshot,
+  Post,
+  PostCategory,
   ProfileInput,
   RecordSummary,
 } from '../types'
@@ -470,6 +474,7 @@ export function AppProvider({ children }: PropsWithChildren) {
                   id: crypto.randomUUID(),
                   memberId: current.member.id,
                   nickname: current.member.nickname,
+                  avatarUrl: current.member.avatarUrl,
                   gender: current.member.gender,
                   experienceMonths: current.member.experienceMonths,
                   lessonCount:
@@ -497,10 +502,18 @@ export function AppProvider({ children }: PropsWithChildren) {
     (courtName: string) =>
       runAction(
         'game-create-slot',
-        `${courtName} 게임 슬롯을 열었습니다.`,
+        `${courtName}에 게임을 열었습니다.`,
         () => gameApi.createSlot(courtName),
-        (current) =>
-          withGameEligibility(current, {
+        (current) => {
+          const courtBusy = current.game.slots.some(
+            (slot) =>
+              slot.courtName === courtName &&
+              (slot.status === 'open' || slot.status === 'playing'),
+          )
+          if (courtBusy) {
+            throw new Error('해당 코트에 이미 진행 중이거나 모집 중인 게임이 있습니다.')
+          }
+          return withGameEligibility(current, {
             ...current.game,
             slots: [
               {
@@ -509,12 +522,14 @@ export function AppProvider({ children }: PropsWithChildren) {
                 status: 'open',
                 source: 'manual',
                 createdAt: new Date().toISOString(),
+                startedAt: null,
                 players: [],
                 result: null,
               },
               ...current.game.slots,
             ],
-          }),
+          })
+        },
       ),
     [runAction],
   )
@@ -534,8 +549,18 @@ export function AppProvider({ children }: PropsWithChildren) {
             throw new Error('참여할 수 없는 슬롯입니다.')
           }
           if (slot.players.length >= 4) throw new Error('슬롯이 가득 찼습니다.')
-          if (!attendance?.active || !attendance.canJoin) {
-            throw new Error('다른 회원의 순환이 끝날 때까지 기다려 주세요.')
+          if (!attendance?.active) {
+            throw new Error('먼저 오늘 게임 참석을 눌러 주세요.')
+          }
+          const occupied = current.game.slots.some(
+            (item) =>
+              (item.status === 'open' || item.status === 'playing') &&
+              item.players.some(
+                (player) => player.memberId === current.member.id,
+              ),
+          )
+          if (occupied) {
+            throw new Error('이미 다른 열린 게임에 참여 중입니다.')
           }
 
           const joinedCycle = current.game.currentCycle
@@ -557,7 +582,10 @@ export function AppProvider({ children }: PropsWithChildren) {
           )
           const attendees = current.game.attendees.map((item) =>
             item.memberId === current.member.id
-              ? { ...item, lastJoinedCycle: joinedCycle }
+              ? {
+                  ...item,
+                  lastJoinedCycle: Math.max(item.lastJoinedCycle, joinedCycle),
+                }
               : item,
           )
           const game = advanceCycleIfComplete({
@@ -632,7 +660,13 @@ export function AppProvider({ children }: PropsWithChildren) {
           return withGameEligibility(current, {
             ...current.game,
             slots: current.game.slots.map((item) =>
-              item.id === slotId ? { ...item, status: 'playing' } : item,
+              item.id === slotId
+                ? {
+                    ...item,
+                    status: 'playing',
+                    startedAt: new Date().toISOString(),
+                  }
+                : item,
             ),
           })
         },
@@ -762,6 +796,7 @@ export function AppProvider({ children }: PropsWithChildren) {
             status: 'open' as const,
             source: 'auto' as const,
             createdAt: new Date().toISOString(),
+            startedAt: null,
             result: null,
             players: arrangement.candidates.map((candidate) => ({
               id: crypto.randomUUID(),
@@ -786,6 +821,151 @@ export function AppProvider({ children }: PropsWithChildren) {
         },
       ),
     [runAction],
+  )
+
+  const cancelGameSlot = useCallback(
+    (slotId: string) =>
+      runAction(
+        'game-cancel-slot',
+        '게임을 삭제했습니다.',
+        () => gameApi.cancelSlot(slotId),
+        (current) => {
+          const slot = current.game.slots.find((item) => item.id === slotId)
+          if (
+            !slot ||
+            (slot.status !== 'open' && slot.status !== 'playing')
+          ) {
+            throw new Error('이미 종료되었거나 취소된 게임입니다.')
+          }
+          const playerIds = new Set(
+            slot.players.map((player) => player.memberId),
+          )
+          const attendees = current.game.attendees.map((attendee) =>
+            playerIds.has(attendee.memberId)
+              ? {
+                  ...attendee,
+                  lastJoinedCycle: Math.min(
+                    attendee.lastJoinedCycle,
+                    Math.max(current.game.currentCycle - 1, 0),
+                  ),
+                }
+              : attendee,
+          )
+          return withGameEligibility(current, {
+            ...current.game,
+            attendees,
+            slots: current.game.slots.filter((item) => item.id !== slotId),
+          })
+        },
+      ),
+    [runAction],
+  )
+
+  const createPost = useCallback(
+    (category: PostCategory, title: string, content: string) =>
+      runAction(
+        'community-create-post',
+        category === 'notice' ? '공지를 등록했습니다.' : '글을 등록했습니다.',
+        () => communityApi.createPost(category, title, content),
+        (current) => {
+          if (category === 'notice' && current.member.role !== 'owner') {
+            throw new Error('공지사항은 관리자만 작성할 수 있습니다.')
+          }
+          const post: Post = {
+            id: crypto.randomUUID(),
+            category,
+            title: title.trim(),
+            content: content.trim(),
+            authorId: current.member.id,
+            authorNickname: current.member.nickname,
+            authorAvatarUrl: current.member.avatarUrl,
+            createdAt: new Date().toISOString(),
+          }
+          return {
+            ...current,
+            community: {
+              ...current.community,
+              notices:
+                category === 'notice'
+                  ? [post, ...current.community.notices]
+                  : current.community.notices,
+              matching:
+                category === 'matching'
+                  ? [post, ...current.community.matching]
+                  : current.community.matching,
+            },
+          }
+        },
+      ),
+    [runAction],
+  )
+
+  const deletePost = useCallback(
+    (postId: string) =>
+      runAction(
+        'community-delete-post',
+        '글을 삭제했습니다.',
+        () => communityApi.deletePost(postId),
+        (current) => ({
+          ...current,
+          community: {
+            ...current.community,
+            notices: current.community.notices.filter(
+              (post) => post.id !== postId,
+            ),
+            matching: current.community.matching.filter(
+              (post) => post.id !== postId,
+            ),
+          },
+        }),
+      ),
+    [runAction],
+  )
+
+  const uploadAvatar = useCallback(
+    async (file: File) => {
+      if (!snapshot) return
+      if (!file.type.startsWith('image/')) {
+        setNotice({ type: 'error', message: '이미지 파일만 올릴 수 있습니다.' })
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setNotice({
+          type: 'error',
+          message: '10MB 이하의 이미지를 선택해 주세요.',
+        })
+        return
+      }
+
+      setBusyAction('avatar-upload')
+      setNotice(null)
+      try {
+        if (demoMode) {
+          const localUrl = URL.createObjectURL(file)
+          setSnapshot({
+            ...snapshot,
+            member: { ...snapshot.member, avatarUrl: localUrl },
+            community: {
+              ...snapshot.community,
+              members: snapshot.community.members.map((member) =>
+                member.memberId === snapshot.member.id
+                  ? { ...member, avatarUrl: localUrl }
+                  : member,
+              ),
+            },
+          })
+        } else {
+          await uploadAvatarPhoto(file)
+          await loadRemoteSnapshot()
+        }
+        setNotice({ type: 'success', message: '프로필 사진을 변경했습니다.' })
+      } catch (error) {
+        setNotice({ type: 'error', message: actionError(error) })
+      } finally {
+        setBusyAction(null)
+      }
+    },
+    [demoMode, loadRemoteSnapshot, snapshot],
   )
 
   const saveProfile = useCallback(
@@ -813,6 +993,19 @@ export function AppProvider({ children }: PropsWithChildren) {
                 }
               : attendee,
           )
+          const communityMembers = current.community.members.map(
+            (communityMember) =>
+              communityMember.memberId === current.member.id
+                ? {
+                    ...communityMember,
+                    nickname: input.nickname,
+                    gender: input.gender,
+                    experienceMonths: input.experienceMonths,
+                    lessonCount:
+                      input.priorLessonCount + current.lesson.monthlyCount,
+                  }
+                : communityMember,
+          )
           return withGameEligibility({
             ...current,
             member,
@@ -825,6 +1018,7 @@ export function AppProvider({ children }: PropsWithChildren) {
                 ) ?? null,
             },
             game: { ...current.game, attendees },
+            community: { ...current.community, members: communityMembers },
           })
         },
       ),
@@ -866,7 +1060,11 @@ export function AppProvider({ children }: PropsWithChildren) {
       leaveGameSlot,
       startGameSlot,
       completeGameSlot,
+      cancelGameSlot,
       confirmAutoArrangement,
+      createPost,
+      deletePost,
+      uploadAvatar,
       saveProfile,
       enableNotifications,
     }),
@@ -890,7 +1088,11 @@ export function AppProvider({ children }: PropsWithChildren) {
       leaveGameSlot,
       startGameSlot,
       completeGameSlot,
+      cancelGameSlot,
       confirmAutoArrangement,
+      createPost,
+      deletePost,
+      uploadAvatar,
       saveProfile,
       enableNotifications,
     ],
