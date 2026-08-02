@@ -1,0 +1,12 @@
+{
+  // Cloudflare Workers 정적 자산 배포 설정
+  // 서버 코드 없이 dist 폴더의 빌드 결과만 전 세계 엣지에 배포합니다.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "etri-kokkok",
+  "compatibility_date": "2026-08-02",
+  "assets": {
+    "directory": "./dist",
+    // 존재하지 않는 경로는 index.html 을 200 으로 반환해 SPA 라우팅을 지원합니다.
+    "not_found_handling": "single-page-application"
+  }
+}

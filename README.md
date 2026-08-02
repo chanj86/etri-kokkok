@@ -89,18 +89,26 @@ git remote add origin https://github.com/<사용자명>/<저장소명>.git
 git push -u origin main
 ```
 
-### 2. Pages 프로젝트 생성
+### 2. Workers 프로젝트 생성
 
-Cloudflare 대시보드에서 `Workers & Pages` → `Create` → `Pages` → Git 저장소 연결 후 다음 값을 사용합니다.
+Cloudflare 대시보드에서 `Compute (Workers & Pages)` → `Create` → Git 저장소 연결 후 다음 값을 사용합니다.
 
-- Framework preset: `Vite`
+- Project name: `etri-kokkok`
 - Build command: `npm run build`
-- Build output directory: `dist`
-- 환경 변수: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`
+- Deploy command: `npx wrangler deploy`
 
-세 환경 변수는 `.env.local`에 생성된 값을 그대로 복사하면 됩니다. Node 버전은 `.nvmrc`의 `22`가 자동 적용됩니다.
+배포 설정은 [wrangler.jsonc](wrangler.jsonc)에 있습니다. 서버 코드 없이 `dist` 폴더만 엣지에 올리며, `not_found_handling`이 SPA 경로를 처리합니다. Node 버전은 `.nvmrc`의 `22`가 적용됩니다.
 
-SPA 경로 처리는 `public/_redirects`, 보안 헤더는 `public/_headers`에 포함되어 있습니다.
+빌드에 필요한 공개 환경 변수는 [.env.production](.env.production)에 들어 있어 대시보드에서 따로 등록하지 않아도 됩니다. 이 파일에는 브라우저에 노출되어도 안전한 값만 두며, 비밀값은 `supabase/.env`에만 보관합니다.
+
+보안 헤더는 `public/_headers`에 정의되어 있습니다.
+
+로컬에서 배포와 동일한 환경을 확인하려면 다음을 실행합니다.
+
+```bash
+npm run build
+npx wrangler dev --local
+```
 
 ### 3. 배포 주소 반영
 
