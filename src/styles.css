@@ -2,10 +2,38 @@
    Atlassian Design System 을 참고한 고밀도·플랫 스타일.
    흰 배경 + 네이비 블루(주색) + ETRI 오렌지(강조) 조합. */
 
+/* 제목: 군함이말문트였체 (경남FC) / 본문: Mona12 (Monad ABXY, OFL) */
+@font-face {
+  font-family: "GFCGunhamiTalks";
+  src: url("/fonts/GFCGunhamiTalks.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Mona12";
+  src: url("/fonts/Mona12.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Mona12";
+  src: url("/fonts/Mona12-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   font-family:
-    Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
-    "Noto Sans KR", "Segoe UI", sans-serif;
+    "Mona12", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+  --font-title:
+    "GFCGunhamiTalks", "Mona12", Pretendard, -apple-system,
+    BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   color: #172b4d;
   background: #f7f8f9;
   font-synthesis: none;
@@ -438,9 +466,10 @@ ol {
 
 .page-header h1 {
   color: var(--ink);
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: var(--font-title);
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 .page-header p:not(.eyebrow) {
@@ -672,7 +701,8 @@ ol {
   border-radius: 12px;
   color: #ffffff;
   background: var(--navy);
-  font-weight: 800;
+  font-family: var(--font-title);
+  font-weight: 400;
   animation: breathe 1.4s ease-in-out infinite;
 }
 
@@ -877,10 +907,11 @@ ol {
 .auth-brand-name {
   margin-top: 2px;
   color: var(--navy);
-  font-size: 40px;
-  font-weight: 900;
-  letter-spacing: 0.3em;
-  text-indent: 0.3em;
+  font-family: var(--font-title);
+  font-size: 44px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-indent: 0.12em;
   line-height: 1.1;
 }
 
