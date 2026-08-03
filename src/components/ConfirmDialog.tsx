@@ -8,6 +8,7 @@ export function ConfirmDialog({
   cancelLabel = '취소',
   tone = 'primary',
   busy = false,
+  hideCancel = false,
   onConfirm,
   onCancel,
 }: {
@@ -18,6 +19,8 @@ export function ConfirmDialog({
   cancelLabel?: string
   tone?: 'primary' | 'danger'
   busy?: boolean
+  /** 안내(확인만 있는) 팝업으로 사용할 때 */
+  hideCancel?: boolean
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -35,14 +38,16 @@ export function ConfirmDialog({
         <h2 className="modal-title">{title}</h2>
         <div className="modal-body">{message}</div>
         <div className="modal-actions">
-          <button
-            className="button subtle"
-            type="button"
-            disabled={busy}
-            onClick={onCancel}
-          >
-            {cancelLabel}
-          </button>
+          {!hideCancel && (
+            <button
+              className="button subtle"
+              type="button"
+              disabled={busy}
+              onClick={onCancel}
+            >
+              {cancelLabel}
+            </button>
+          )}
           <button
             className={`button ${tone === 'danger' ? 'danger' : 'primary'}`}
             type="button"

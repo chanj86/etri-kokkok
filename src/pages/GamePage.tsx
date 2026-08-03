@@ -47,11 +47,13 @@ function TeamColumn({
   team,
   slot,
   busy,
+  onJoinTeam,
   onRemoveGuest,
 }: {
   team: Team
   slot: GameSlot
   busy: boolean
+  onJoinTeam?: (team: Team) => void
   onRemoveGuest?: (playerId: string) => void
 }) {
   const players = slot.players.filter((player) => player.team === team)
@@ -68,27 +70,46 @@ function TeamColumn({
       </div>
       {Array.from({ length: seats }, (_, index) => {
         const player = players[index]
-        return player ? (
-          <div
-            className={`player-chip${player.isGuest ? ' guest' : ''}`}
-            key={player.id}
-          >
-            <span>{player.nickname.slice(0, 1)}</span>
-            <strong>{player.nickname}</strong>
-            {player.isGuest && <em className="guest-tag">게스트</em>}
-            {player.isGuest && slot.status === 'open' && onRemoveGuest && (
-              <button
-                className="chip-remove"
-                type="button"
-                aria-label={`게스트 ${player.nickname} 제외`}
-                disabled={busy}
-                onClick={() => onRemoveGuest(player.id)}
-              >
-                <X size={11} />
-              </button>
-            )}
-          </div>
-        ) : (
+        if (player) {
+          return (
+            <div
+              className={`player-chip${player.isGuest ? ' guest' : ''}`}
+              key={player.id}
+            >
+              <span>{player.nickname.slice(0, 1)}</span>
+              <strong>{player.nickname}</strong>
+              {player.isGuest && <em className="guest-tag">게스트</em>}
+              {player.isGuest && slot.status === 'open' && onRemoveGuest && (
+                <button
+                  className="chip-remove"
+                  type="button"
+                  aria-label={`게스트 ${player.nickname} 제외`}
+                  disabled={busy}
+                  onClick={() => onRemoveGuest(player.id)}
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          )
+        }
+        if (onJoinTeam) {
+          return (
+            <button
+              className="player-chip empty joinable"
+              type="button"
+              key={`empty-${team}-${index}`}
+              disabled={busy}
+              onClick={() => onJoinTeam(team)}
+            >
+              <span>
+                <Plus size={12} />
+              </span>
+              <strong>이 팀으로 참여</strong>
+            </button>
+          )
+        }
+        return (
           <div className="player-chip empty" key={`empty-${team}-${index}`}>
             <span>
               <Plus size={12} />
@@ -116,7 +137,7 @@ function SlotCard({
   slot: GameSlot
   memberId: string
   busy: boolean
-  onJoinRequest: (slot: GameSlot) => void
+  onJoinRequest: (slot: GameSlot, team?: Team) => void
   onLeave: () => void
   onStart: () => void
   onComplete: (teamAScore: number, teamBScore: number) => void
@@ -131,16 +152,19 @@ function SlotCard({
     String(slot.result?.teamBScore ?? 15),
   )
   const [editingResult, setEditingResult] = useState(false)
+  const [scoringOpen, setScoringOpen] = useState(false)
   const [guestFormOpen, setGuestFormOpen] = useState(false)
   const [guestName, setGuestName] = useState('')
   const mine = slot.players.some((player) => player.memberId === memberId)
   const capacity = gameSlotCapacity(slot.gameType ?? 'doubles')
   const isFull = slot.players.length >= capacity
+  const canJoinSeat = slot.status === 'open' && !mine && !isFull
 
   const submitScore = (event: FormEvent) => {
     event.preventDefault()
     onComplete(Number(teamAScore), Number(teamBScore))
     setEditingResult(false)
+    setScoringOpen(false)
   }
 
   const submitGuest = (event: FormEvent) => {
@@ -193,6 +217,9 @@ function SlotCard({
           team="A"
           slot={slot}
           busy={busy}
+          onJoinTeam={
+            canJoinSeat ? (team) => onJoinRequest(slot, team) : undefined
+          }
           onRemoveGuest={onRemoveGuest}
         />
         <div className="versus-mark">VS</div>
@@ -200,6 +227,9 @@ function SlotCard({
           team="B"
           slot={slot}
           busy={busy}
+          onJoinTeam={
+            canJoinSeat ? (team) => onJoinRequest(slot, team) : undefined
+          }
           onRemoveGuest={onRemoveGuest}
         />
       </div>
@@ -272,6 +302,20 @@ function SlotCard({
         </form>
       )}
 
+      {slot.status === 'playing' && !scoringOpen && (
+        <div className="slot-actions">
+          <button
+            className="button primary"
+            type="button"
+            disabled={busy}
+            onClick={() => setScoringOpen(true)}
+          >
+            <Trophy size={14} />
+            게임 종료
+          </button>
+        </div>
+      )}
+
       {slot.status === 'completed' && !editingResult && (
         <div className="slot-actions end">
           <button
@@ -286,7 +330,7 @@ function SlotCard({
         </div>
       )}
 
-      {(slot.status === 'playing' || editingResult) && (
+      {((slot.status === 'playing' && scoringOpen) || editingResult) && (
         <form className="score-form" onSubmit={submitScore}>
           <label>
             <span>팀 A</span>
@@ -313,7 +357,18 @@ function SlotCard({
           </label>
           <button className="button primary" type="submit" disabled={busy}>
             <Trophy size={14} />
-            {slot.status === 'completed' ? '수정 저장' : '전적 저장'}
+            {slot.status === 'completed' ? '수정 저장' : '점수 기록'}
+          </button>
+          <button
+            className="icon-button small"
+            type="button"
+            aria-label="점수 입력 닫기"
+            onClick={() => {
+              setScoringOpen(false)
+              setEditingResult(false)
+            }}
+          >
+            <X size={13} />
           </button>
         </form>
       )}
@@ -414,6 +469,7 @@ export function GamePage() {
   const [joinConfirm, setJoinConfirm] = useState<{
     slotId: string
     nth: number
+    team?: Team
   } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<GameSlot | null>(null)
   const [detailMember, setDetailMember] = useState<CommunityMember | null>(
@@ -468,17 +524,17 @@ export function GamePage() {
     setSelectedCourt(court)
   }
 
-  const requestJoin = (slot: GameSlot) => {
+  const requestJoin = (slot: GameSlot, team?: Team) => {
     if (!game.myAttendanceActive) return
     if (myOccupied) return
     if (myAttendance && !myAttendance.canJoin) {
       const joinedToday = game.slots.filter((item) =>
         item.players.some((player) => player.memberId === member.id),
       ).length
-      setJoinConfirm({ slotId: slot.id, nth: joinedToday + 1 })
+      setJoinConfirm({ slotId: slot.id, nth: joinedToday + 1, team })
       return
     }
-    void joinGameSlot(slot.id)
+    void joinGameSlot(slot.id, team)
   }
 
   const generateAuto = () => {
@@ -766,7 +822,9 @@ export function GamePage() {
         confirmLabel="참여하기"
         busy={busy}
         onConfirm={() => {
-          if (joinConfirm) void joinGameSlot(joinConfirm.slotId)
+          if (joinConfirm) {
+            void joinGameSlot(joinConfirm.slotId, joinConfirm.team)
+          }
           setJoinConfirm(null)
         }}
         onCancel={() => setJoinConfirm(null)}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   calculateLessonStartTimes,
+  isLessonTime,
   lessonOpensAt,
   minutesUntil,
 } from './lessonSchedule'
@@ -100,5 +101,34 @@ describe('레슨 시간 배정', () => {
         new Date('2026-07-31T08:00:00.000Z'),
       ),
     ).toBe(16)
+  })
+})
+
+describe('레슨 운영 시간 (월수금 17-20시 KST)', () => {
+  it('월요일 18시는 레슨 시간이다', () => {
+    // 2026-08-03 = 월요일, 18:00 KST = 09:00 UTC
+    expect(isLessonTime(new Date('2026-08-03T09:00:00.000Z'))).toBe(true)
+  })
+
+  it('월요일 17시 정각부터 가능하다', () => {
+    expect(isLessonTime(new Date('2026-08-03T08:00:00.000Z'))).toBe(true)
+  })
+
+  it('월요일 16시 59분은 레슨 시간이 아니다', () => {
+    expect(isLessonTime(new Date('2026-08-03T07:59:00.000Z'))).toBe(false)
+  })
+
+  it('월요일 20시 이후는 레슨 시간이 아니다', () => {
+    expect(isLessonTime(new Date('2026-08-03T11:00:00.000Z'))).toBe(false)
+  })
+
+  it('화요일은 레슨 시간이 아니다', () => {
+    // 2026-08-04 = 화요일, 18:00 KST
+    expect(isLessonTime(new Date('2026-08-04T09:00:00.000Z'))).toBe(false)
+  })
+
+  it('수요일과 금요일 저녁은 레슨 시간이다', () => {
+    expect(isLessonTime(new Date('2026-08-05T10:30:00.000Z'))).toBe(true)
+    expect(isLessonTime(new Date('2026-08-07T08:30:00.000Z'))).toBe(true)
   })
 })

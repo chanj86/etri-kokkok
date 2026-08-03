@@ -405,12 +405,22 @@ begin
   singles_slot := public.create_game_slot('코트 B', 'singles');
   perform public.join_game_slot(singles_slot);
 
+  -- 팀을 직접 선택해 참여할 수 있다.
   perform set_config(
     'request.jwt.claim.sub',
     '00000000-0000-0000-0000-000000000102',
     true
   );
-  perform public.join_game_slot(singles_slot);
+  perform public.join_game_slot(singles_slot, 'B');
+
+  if (
+    select team
+    from public.game_slot_players
+    where slot_id = singles_slot
+      and member_id = '00000000-0000-0000-0000-000000000102'
+  ) <> 'B' then
+    raise exception '선택한 팀으로 참여가 반영되지 않았습니다.';
+  end if;
 
   -- 단식 정원(2명) 초과 참여는 차단된다.
   perform set_config(
@@ -454,12 +464,23 @@ begin
   guest_player := public.add_guest_player(guest_slot, '게스트김');
   perform public.add_guest_player(guest_slot, '게스트리');
 
+  -- 빈 자리가 없는 팀은 선택할 수 없다. (A팀: 103 + 게스트김)
   perform set_config(
     'request.jwt.claim.sub',
     '00000000-0000-0000-0000-000000000104',
     true
   );
-  perform public.join_game_slot(guest_slot);
+  blocked := false;
+  begin
+    perform public.join_game_slot(guest_slot, 'A');
+  exception when others then
+    blocked := true;
+  end;
+  if not blocked then
+    raise exception '가득 찬 팀 선택이 차단되지 않았습니다.';
+  end if;
+
+  perform public.join_game_slot(guest_slot, 'B');
 
   -- 정원이 차면 게스트도 더 추가할 수 없다.
   blocked := false;

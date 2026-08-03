@@ -47,3 +47,19 @@ export function calculateLessonStartTimes(
 export function minutesUntil(value: string, now = new Date()): number {
   return Math.ceil((new Date(value).getTime() - now.getTime()) / 60_000)
 }
+
+export const LESSON_TIME_MESSAGE =
+  '레슨 시간이 아닙니다. 레슨은 월수금 17:00-20:00에 진행됩니다.'
+
+/** 레슨 운영 시간: 월·수·금 17:00-20:00 (한국 시간) */
+export function isLessonTime(now = new Date()): boolean {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    weekday: 'short',
+    hour: 'numeric',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const weekday = parts.find((part) => part.type === 'weekday')?.value ?? ''
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? -1)
+  return ['Mon', 'Wed', 'Fri'].includes(weekday) && hour >= 17 && hour < 20
+}

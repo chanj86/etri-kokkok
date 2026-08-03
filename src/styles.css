@@ -1720,6 +1720,28 @@ ol {
   font-weight: 500;
 }
 
+/* 빈 자리를 눌러 원하는 팀으로 참여 */
+button.player-chip.joinable {
+  width: 100%;
+  border-color: #85b8ff;
+  background: var(--info-bg);
+  text-align: left;
+}
+
+button.player-chip.joinable > span {
+  color: var(--primary);
+  background: #cfe1fd;
+}
+
+button.player-chip.joinable strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+button.player-chip.joinable:not(:disabled):hover {
+  background: #cfe1fd;
+}
+
 .player-chip.guest > span {
   color: var(--warning-text);
   background: var(--warning-bg);

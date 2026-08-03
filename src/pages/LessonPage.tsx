@@ -11,7 +11,12 @@ import { ShuttlecockIcon } from '../components/ShuttlecockIcon'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { formatTime, toSeoulDateKey } from '../lib/format'
-import { LESSON_DURATION_MINUTES, minutesUntil } from '../lib/lessonSchedule'
+import {
+  LESSON_DURATION_MINUTES,
+  LESSON_TIME_MESSAGE,
+  isLessonTime,
+  minutesUntil,
+} from '../lib/lessonSchedule'
 
 const LESSON_MS = LESSON_DURATION_MINUTES * 60_000
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
@@ -41,6 +46,15 @@ export function LessonPage() {
   } = useApp()
   const now = useNow()
   const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [timeAlert, setTimeAlert] = useState(false)
+
+  const handleJoin = () => {
+    if (!isLessonTime()) {
+      setTimeAlert(true)
+      return
+    }
+    void joinLesson()
+  }
 
   if (!snapshot) return null
   const { lesson } = snapshot
@@ -72,14 +86,14 @@ export function LessonPage() {
     <div className="page-stack">
       <PageHeader
         title="레슨"
-        description="도착 순서대로 1인 15분씩 배정됩니다. 17시 이후 참석할 수 있습니다."
+        description="도착 순서대로 1인 15분씩 배정됩니다. 월·수·금 17:00-20:00에 참석할 수 있습니다."
         action={
           !lesson.myBooking ? (
             <button
               className={`button primary${lesson.canJoin ? ' attention' : ''}`}
               type="button"
-              disabled={!lesson.canJoin || busyAction === 'lesson-join'}
-              onClick={() => void joinLesson()}
+              disabled={busyAction === 'lesson-join'}
+              onClick={handleJoin}
             >
               <ShuttlecockIcon size={14} />
               레슨 참석
@@ -233,6 +247,16 @@ export function LessonPage() {
           )}
         </div>
       </section>
+
+      <ConfirmDialog
+        open={timeAlert}
+        title="레슨 시간 안내"
+        message={LESSON_TIME_MESSAGE}
+        confirmLabel="확인"
+        hideCancel
+        onConfirm={() => setTimeAlert(false)}
+        onCancel={() => setTimeAlert(false)}
+      />
 
       <ConfirmDialog
         open={cancelConfirm}

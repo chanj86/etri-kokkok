@@ -7,6 +7,7 @@ import type {
   MatchingPostInput,
   PostCategory,
   ProfileInput,
+  Team,
 } from '../types'
 
 export interface AppNotice {
@@ -31,7 +32,7 @@ export interface AppContextValue {
   cancelLesson: () => Promise<void>
   setGameAttendance: (active: boolean) => Promise<void>
   createGameSlot: (courtName: string, gameType?: GameType) => Promise<void>
-  joinGameSlot: (slotId: string) => Promise<void>
+  joinGameSlot: (slotId: string, team?: Team) => Promise<void>
   leaveGameSlot: (slotId: string) => Promise<void>
   addGuestPlayer: (slotId: string, guestName: string) => Promise<void>
   removeGuestPlayer: (slotId: string, playerId: string) => Promise<void>

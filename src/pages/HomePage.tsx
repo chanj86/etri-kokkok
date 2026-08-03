@@ -7,17 +7,24 @@ import {
   Megaphone,
   Trophy,
 } from 'lucide-react'
+import { useState } from 'react'
 import { AppLink } from '../components/AppLink'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { InstallCard } from '../components/InstallCard'
 import { ShuttlecockIcon } from '../components/ShuttlecockIcon'
 import { PageHeader } from '../components/ui'
 import { useApp } from '../hooks/useApp'
 import { navigate } from '../lib/navigation'
 import { formatShortDate, formatTime } from '../lib/format'
-import { minutesUntil } from '../lib/lessonSchedule'
+import {
+  LESSON_TIME_MESSAGE,
+  isLessonTime,
+  minutesUntil,
+} from '../lib/lessonSchedule'
 
 export function HomePage() {
   const { snapshot, busyAction, joinLesson, setGameAttendance } = useApp()
+  const [timeAlert, setTimeAlert] = useState(false)
 
   if (!snapshot) return null
 
@@ -51,12 +58,15 @@ export function HomePage() {
         <button
           type="button"
           className={`quick-action lesson${lessonDone ? ' done' : ''}`}
-          disabled={
-            (!lessonDone && !lesson.canJoin) || busyAction === 'lesson-join'
-          }
+          disabled={busyAction === 'lesson-join'}
           onClick={() => {
-            if (lessonDone) navigate('/lesson')
-            else void joinLesson()
+            if (lessonDone) {
+              navigate('/lesson')
+            } else if (!isLessonTime()) {
+              setTimeAlert(true)
+            } else {
+              void joinLesson()
+            }
           }}
         >
           <span className="quick-action-icon">
@@ -71,7 +81,7 @@ export function HomePage() {
                   : `${lesson.myBooking.position}번째 · ${formatTime(lesson.myBooking.estimatedStartAt)} 예상`
                 : lesson.canJoin
                   ? '도착 순서대로 배정됩니다'
-                  : '17시 이후 참석 가능'}
+                  : '월·수·금 17-20시 참석 가능'}
             </small>
           </span>
           <ChevronRight size={16} className="quick-action-chevron" />
@@ -240,6 +250,16 @@ export function HomePage() {
       </div>
 
       <InstallCard />
+
+      <ConfirmDialog
+        open={timeAlert}
+        title="레슨 시간 안내"
+        message={LESSON_TIME_MESSAGE}
+        confirmLabel="확인"
+        hideCancel
+        onConfirm={() => setTimeAlert(false)}
+        onCancel={() => setTimeAlert(false)}
+      />
     </div>
   )
 }

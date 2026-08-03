@@ -34,6 +34,7 @@ import {
   type PostCategory,
   type ProfileInput,
   type RecordSummary,
+  type Team,
 } from '../types'
 import { AppContext, type AppNotice } from './appContext'
 
@@ -591,11 +592,11 @@ export function AppProvider({ children }: PropsWithChildren) {
   )
 
   const joinGameSlot = useCallback(
-    (slotId: string) =>
+    (slotId: string, team?: Team) =>
       runAction(
         'game-join-slot',
         '게임 슬롯에 참여했습니다.',
-        () => gameApi.joinSlot(slotId),
+        () => gameApi.joinSlot(slotId, team),
         (current) => {
           const slot = current.game.slots.find((item) => item.id === slotId)
           const attendance = current.game.attendees.find(
@@ -622,16 +623,27 @@ export function AppProvider({ children }: PropsWithChildren) {
             throw new Error('이미 다른 열린 게임에 참여 중입니다.')
           }
 
+          const teamCapacity = capacity / 2
           const teamACount = slot.players.filter(
             (player) => player.team === 'A',
           ).length
+          let assignedTeam: Team
+          if (team) {
+            const teamCount =
+              team === 'A' ? teamACount : slot.players.length - teamACount
+            if (teamCount >= teamCapacity) {
+              throw new Error('해당 팀에 빈 자리가 없습니다.')
+            }
+            assignedTeam = team
+          } else {
+            assignedTeam = teamACount < teamCapacity ? 'A' : 'B'
+          }
           const player = {
             id: crypto.randomUUID(),
             memberId: current.member.id,
             nickname: current.member.nickname,
             isGuest: false,
-            team:
-              teamACount < capacity / 2 ? ('A' as const) : ('B' as const),
+            team: assignedTeam,
             joinedCycle: current.game.currentCycle,
             skillScore: calculateSkillScore(
               attendance.experienceMonths,

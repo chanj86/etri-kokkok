@@ -109,8 +109,11 @@ export const gameApi = {
       p_court_name: courtName,
       p_game_type: gameType,
     }),
-  joinSlot: (slotId: string) =>
-    runAction('join_game_slot', { p_slot_id: slotId }),
+  joinSlot: (slotId: string, team?: Team) =>
+    runAction('join_game_slot', {
+      p_slot_id: slotId,
+      ...(team ? { p_team: team } : {}),
+    }),
   addGuest: (slotId: string, guestName: string) =>
     runAction('add_guest_player', {
       p_slot_id: slotId,
